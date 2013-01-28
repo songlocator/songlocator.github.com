@@ -5,17 +5,22 @@ require.config
     underscore: "../components/underscore/underscore"
     backbone: "../components/backbone/backbone"
     "backbone.viewdsl": "../components/backbone.viewdsl/backbone.viewdsl"
+    soundmanager2: "../components/soundmanager/script/soundmanager2"
   shim:
     backbone:
       exports: "Backbone"
       deps: ["underscore", "jquery"]
     underscore:
       exports: "_"
+    soundmanager2:
+      exports: "soundManager"
 
 define (require, exports) ->
   {View, renderInPlace} = require 'backbone.viewdsl'
   {extend, uniqueId} = require 'underscore'
   {Events} = require 'backbone'
+  soundManager = require 'soundmanager2'
+
 
   class exports.SongLocatorClient
     extend this.prototype, Events
@@ -72,7 +77,9 @@ define (require, exports) ->
     events:
       keypress: (e) ->
         return unless e.keyCode == 13 # Enter
-        search(this.$el.val())
+        searchString = this.$el.val().trim()
+        return unless searchString
+        search(searchString)
 
   class exports.ResultList extends View
     tagName: 'ul'
@@ -84,11 +91,8 @@ define (require, exports) ->
         for r in result.results
           this.renderResult(r) 
 
-      Events.on 'songlocator:search songlocator:resolve', (qid, searchString) =>
-        this.qid = qid
-        for v in this.views
-          v.remove()
-        this.$el.html('')
+      Events.on 'songlocator:search songlocator:resolve', (qid) =>
+        this.reset(qid)
 
     renderResult: (result) ->
       this.renderDOM """
@@ -97,13 +101,23 @@ define (require, exports) ->
         </li>
         """, {result: result}
 
+    reset: (qid) ->
+      this.qid = qid
+      for v in this.views
+        v.remove()
+      this.$el.html('')
+
+
   class exports.SongView extends View
     className: 'song'
+    events:
+      click: ->
+        Events.trigger 'songlocator:play', this.model
+
     render: ->
-      console.log this.model
       this.$el.html $ """
         <span class="source">
-          <a target="_blank" href="#{this.model.linkUrl}">#{this.model.source}</a>
+          <a target="_blank" href="#{this.model.linkUrl or '#'}">#{this.model.source}</a>
         </span>
         <span class="track">#{this.model.track}</span>
         by <span class="artist">#{this.model.artist}</span>
@@ -123,8 +137,20 @@ define (require, exports) ->
     Events.trigger 'songlocator:resolve', qid, artist, track, album
     songlocator.resolve(qid, artist, track, album)
 
+  Events.on 'songlocator:play', (model) =>
+    soundManager.stopAll()
+    soundManager.createSound
+      id: uniqueId('sound')
+      url: model.url
+      autoPlay: true
+      autoLoad: true
+
   extend(window, exports)
 
-  renderInPlace(document.body).done()
+  $ ->
+    renderInPlace(document.body).done()
+    soundManager.setup
+      debugMode: false
+      url: '../components/soundmanager/swf'
 
   exports
