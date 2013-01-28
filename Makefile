@@ -17,5 +17,5 @@ css::
 js::
 	$(COFFEE) -o js js/*.coffee
 
-deps:
+bootstrap:
 	bower install
