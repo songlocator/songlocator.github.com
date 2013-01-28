@@ -138,7 +138,7 @@ define (require, exports) ->
 
     remove: ->
       super
-      this.sound.destuct() if this.sound?
+      this.sound.destruct() if this.sound?
 
   exports.songlocator = new exports.SongLocatorClient
     url: 'ws://localhost:3000'
