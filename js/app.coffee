@@ -96,6 +96,8 @@ define (require, exports) ->
             this.$progress.width(soFar * totalWidth)
           onstop: =>
             this.$progress.width(0)
+          onfinish: =>
+            this.$progress.width(0)
       Events.trigger 'songlocator:play', this.sound
 
     remove: ->
