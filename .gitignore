@@ -1,0 +1,4 @@
+components
+.sass-cache
+js/*.js
+css/*.css

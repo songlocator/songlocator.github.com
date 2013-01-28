@@ -1,0 +1,76 @@
+@import "compass/reset"
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,700&subset=latin,cyrillic)
+
+$bg: #f4f4f4
+$hcolor: #3299bb
+$acolor: #3299bb
+$color: #424242
+
+body
+  font-family: 'Open Sans', Helvetica, sans-serif
+  font-size: 100%
+  background: $bg
+  color: $color
+
+h1, h2, h3, h4, h5, h6
+  text-transform: uppercase
+  font-weight: bold
+  color: $hcolor
+
+h1
+  font-size: 200%
+h2
+  font-size: 170%
+h3
+  font-size: 150%
+h4
+  font-size: 130%
+h5
+  font-size: 130%
+h6
+  font-size: 130%
+
+input
+  color: $color
+
+a
+  text-decoration: none
+  padding: 0 0.1em
+
+  color: $acolor
+
+  &:hover
+    color: $bg
+    background: $acolor
+
+.shadowed
+  color: lighten($color, 10%)
+  font-size: 90%
+
+.app
+  & > header
+    margin-bottom: 40px
+
+    h1
+      font-size: 300%
+
+    .headline
+      font-size: 90%
+      text-transform: uppercase
+      color: lighten($color, 30%)
+
+  & > .search-box
+    margin-bottom: 40px
+
+  width: 600px
+  margin: 40px auto
+
+.search-box
+  border: none
+  border-bottom: 1px solid $bg
+  background: $bg
+  font-size: 200%
+  text-transform: uppercase
+  &:hover, &:focus
+    outline: none
+    border-bottom: 1px solid darken($bg, 10%)
