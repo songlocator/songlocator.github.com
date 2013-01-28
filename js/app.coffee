@@ -20,45 +20,7 @@ define (require, exports) ->
   {extend, uniqueId} = require 'underscore'
   {Events} = require 'backbone'
   soundManager = require 'soundmanager2'
-
-
-  class exports.SongLocatorClient
-    extend this.prototype, Events
-
-    constructor: (options) ->
-      this.options = options
-      this.sockOpenned = false
-      # queue for delayed messages, while socket isn't ready
-      this.delayed = []
-      this.sock = new WebSocket(options.url or 'ws://localhost:3000')
-
-      this.sock.onopen = =>
-        this.log 'ready'
-        # process delayed messages
-        this.sockOpenned = true
-        for msg in this.delayed
-          this.sock.send(msg)
-
-      this.sock.onmessage = (e) =>
-        r = JSON.parse(e.data)
-        this.trigger 'result', r
-
-    send: (msg) ->
-      msg = JSON.stringify(msg)
-      if this.sockOpenned
-        this.sock.send(msg)
-      else
-        this.delayed.push(msg)
-
-    search: (qid, searchString) ->
-      this.send {qid, searchString, method: 'search'}
-
-    resolve: (qid, artist, track, album) ->
-      this.send {qid, artist, track, album, method: 'resolve'}
-
-    log: (msg) ->
-      if this.options.debug
-        console.log 'songlocator: ', msg
+  {SongLocatorClient} = require './songlocator-client'
 
   class exports.App extends View
     className: 'app'
@@ -140,7 +102,7 @@ define (require, exports) ->
       super
       this.sound.destruct() if this.sound?
 
-  exports.songlocator = new exports.SongLocatorClient
+  exports.songlocator = new SongLocatorClient
     url: 'ws://localhost:3000'
     debug: true
 
