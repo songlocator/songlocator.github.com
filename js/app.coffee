@@ -110,18 +110,35 @@ define (require, exports) ->
 
   class exports.SongView extends View
     className: 'song'
+    template: """
+      <span class="source">
+        <a target="_blank" attr-href="{model.linkUrl}">{{model.source}}</a>
+      </span>
+      <span class="track">{{model.track}}</span>
+      <span class="artist">{{model.artist}}</span>
+      <div element-id="$progress" class="progress"></div>
+      """
+
     events:
       click: ->
-        Events.trigger 'songlocator:play', this.model
+        this.play()
 
-    render: ->
-      this.$el.html $ """
-        <span class="source">
-          <a target="_blank" href="#{this.model.linkUrl or '#'}">#{this.model.source}</a>
-        </span>
-        <span class="track">#{this.model.track}</span>
-        by <span class="artist">#{this.model.artist}</span>
-        """
+    play: ->
+      if not this.sound
+        totalWidth = this.$el.width()
+        this.sound = soundManager.createSound
+          id: uniqueId('sound')
+          url: this.model.url
+          whileplaying: =>
+            soFar = (this.sound.position / this.sound.durationEstimate)
+            this.$progress.width(soFar * totalWidth)
+          onstop: =>
+            this.$progress.width(0)
+      Events.trigger 'songlocator:play', this.sound
+
+    remove: ->
+      super
+      this.sound.destuct() if this.sound?
 
   exports.songlocator = new exports.SongLocatorClient
     url: 'ws://localhost:3000'
@@ -137,13 +154,9 @@ define (require, exports) ->
     Events.trigger 'songlocator:resolve', qid, artist, track, album
     songlocator.resolve(qid, artist, track, album)
 
-  Events.on 'songlocator:play', (model) =>
+  Events.on 'songlocator:play', (sound) =>
     soundManager.stopAll()
-    soundManager.createSound
-      id: uniqueId('sound')
-      url: model.url
-      autoPlay: true
-      autoLoad: true
+    sound.play()
 
   extend(window, exports)
 
