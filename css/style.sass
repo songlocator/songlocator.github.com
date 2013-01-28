@@ -58,6 +58,8 @@ a
     margin: 0px auto
     padding-bottom: $footer-height + 80px
     padding-top: 80px
+    @include apply-origin(0px 0px 0px, false)
+    @include rotate(-4deg)
 
   footer
     height: $footer-height
@@ -118,6 +120,10 @@ a
   position: relative
   cursor: pointer
 
+  &:hover
+    background: lighten($color, 10%)
+    color: $bg
+
   .track
     font-size: 120%
   .artist
@@ -135,5 +141,5 @@ a
   .progress
     position: relative
     width: 0
-    height: 1px
+    height: 2px
     background: darken($bg, 30%)
