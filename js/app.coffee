@@ -86,17 +86,27 @@ define (require, exports) ->
 
       Events.on 'songlocator:search songlocator:resolve', (qid, searchString) =>
         this.qid = qid
+        for v in this.views
+          v.remove()
         this.$el.html('')
 
     renderResult: (result) ->
-      console.log result
-      this.$el.append $ """
+      this.renderDOM """
         <li>
-          <div class="song">
-            <span class="track">#{result.track}</span>
-            by <span class="artist">#{result.artist}</span>
-          </div>
+          <view name="app:SongView" model="result"></view>
         </li>
+        """, {result: result}
+
+  class exports.SongView extends View
+    className: 'song'
+    render: ->
+      console.log this.model
+      this.$el.html $ """
+        <span class="source">
+          <a target="_blank" href="#{this.model.linkUrl}">#{this.model.source}</a>
+        </span>
+        <span class="track">#{this.model.track}</span>
+        by <span class="artist">#{this.model.artist}</span>
         """
 
   exports.songlocator = new exports.SongLocatorClient
