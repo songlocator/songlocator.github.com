@@ -110,10 +110,11 @@ define (require, exports) ->
           this.stop()
 
     initialize: ->
-      Events.trigger 'songlocator:stop', =>
-        this.stop()
+      Events.on 'songlocator:play', (sound) =>
+        this.stop() if sound != this.sound
 
     stop: ->
+      this.$progress.width(0)
       this.$el.removeClass('playing')
       this.isPlaying = false
       this.sound.stop() if this.sound
@@ -124,22 +125,21 @@ define (require, exports) ->
       this.$progress.width(soFar * totalWidth)
 
     createSound: ->
-      this.sound = player.createSound
+      player.createSound
         id: uniqueId('sound')
         playerId: this.playerId
         width: 200
         height: 200
         url: this.model.linkUrl
-        whileplaying: =>
-          this.onPlaying()
-        onstop: => this.$progress.width(0)
-        onfinish: => this.$progress.width(0)
+        whileplaying: => this.onPlaying()
+        onstop: => this.stop()
+        onfinish: => this.stop()
 
     play: ->
       this.isPlaying = true
       this.$el.addClass('playing')
-      if not this.sound
-        this.createSound()
+      this.sound = this.createSound() unless this.sound
+      this.sound.play()
       Events.trigger 'songlocator:play', this.sound
 
     remove: ->
@@ -168,10 +168,6 @@ define (require, exports) ->
         youtubeManager.createSound(options)
       else
         soundManager.createSound(options)
-
-  Events.on 'songlocator:play', (sound) =>
-    Events.trigger 'songlocator:stop'
-    sound.play()
 
   extend(window, exports)
 
