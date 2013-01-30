@@ -7,6 +7,8 @@
     "backbone": "~0.9.9",
     "backbone.viewdsl": "~0.8.1",
     "underscore": "~1.4.3",
-    "soundmanager": ""
+    "soundmanager": "",
+    "youtubemanager": "0.1.0",
+    "songlocator": "0.1.0"
   }
 }

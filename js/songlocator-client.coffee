@@ -3,6 +3,14 @@ define (require, exports) ->
   {Events} = require 'backbone'
   {extend} = require 'underscore'
 
+  alphasOnly = (v) ->
+    v
+      .replace(/[^a-zA-Z]+/g, ' ')
+      .replace(/[ ]+/g, ' ')
+
+  tokenize = (v) ->
+    v.split(' ')
+
   class exports.SongLocatorClient
     extend this.prototype, Events
 

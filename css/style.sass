@@ -120,6 +120,33 @@ a
   position: relative
   cursor: pointer
 
+  .box
+    display: none
+    height: 200px
+
+    .cover
+      width: 200px
+
+    .cover-wrapper
+      float: left
+      width: 200px
+      height: 200px
+
+    .metadata-wrapper
+      float: left
+      font-size: 180%
+      padding: 10px
+
+  &.playing
+    .box
+      background: lighten($bg, 10%)
+      display: block
+    .metadata-line
+      display: none
+    &:hover
+      background: none
+      color: $color
+
   &:hover
     background: lighten($color, 10%)
     color: $bg
@@ -143,3 +170,4 @@ a
     width: 0
     height: 2px
     background: darken($bg, 30%)
+
