@@ -1,23 +1,3 @@
-require.config
-  baseUrl: "js"
-  paths:
-    jquery: "../components/jquery/jquery"
-    underscore: "../components/underscore/underscore"
-    backbone: "../components/backbone/backbone"
-    "backbone.viewdsl": "../components/backbone.viewdsl/backbone.viewdsl"
-    soundmanager2: "../components/soundmanager/script/soundmanager2"
-    youtubemanager: "../components/youtubemanager/lib/youtubemanager"
-    'songlocator-base': "../components/songlocator/lib/amd/songlocator-base"
-    'songlocator-youtube': "../components/songlocator/lib/amd/songlocator-youtube"
-  shim:
-    backbone:
-      exports: "Backbone"
-      deps: ["underscore", "jquery"]
-    underscore:
-      exports: "_"
-    soundmanager2:
-      exports: "soundManager"
-
 define('xmlhttprequest', {XMLHttpRequest})
 
 define (require, exports) ->
@@ -34,9 +14,26 @@ define (require, exports) ->
   class exports.App extends View
     className: 'app'
     parameterizable: true
+    template: """
+      <article>
+        <view name="app:SearchBox"></view>
+        <view name="app:ResultList"></view>
+      </article>
 
-    render: (partial) ->
-      this.renderDOM(partial)
+      <footer>
+        <div>
+          <h3>SongLocator</h3>
+          <p class="feedback">
+            Have any feedback? Send me a <a
+                target="_blank"
+                href="https://twitter.com/share?related=SongLocatorWeb&text=@SongLocatorWeb"
+                class="twitter-share-button"
+                data-lang="en">tweet</a> or an
+            <a href="mailto:8mayday+songlocator@gmail.com">email</a> message
+          </p>
+        </div>
+      </footer>
+      """
 
   class exports.SearchBox extends View
     tagName: 'input'
@@ -172,10 +169,10 @@ define (require, exports) ->
   extend(window, exports)
 
   $ ->
-    renderInPlace(document.body).done()
-    soundManager.setup
-      debugMode: false
-      url: '../components/soundmanager/swf'
+    soundManager.setup(url: 'swf')
     youtubeManager.setup()
+    app = exports.app = new App()
+    app.render()
+    document.body.appendChild(app.el)
 
   exports

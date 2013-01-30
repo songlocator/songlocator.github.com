@@ -28,3 +28,13 @@ bootstrap:
 
 deploy:
 	git push origin master:gh-pages
+
+build-js:
+	r.js -o ./build.js
+
+build: clean-build
+	mkdir -p build
+	cp -rf css js swf ./build/
+
+clean-build:
+	rm -rf build/css build/js build/swf

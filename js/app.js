@@ -2,32 +2,6 @@
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-require.config({
-  baseUrl: "js",
-  paths: {
-    jquery: "../components/jquery/jquery",
-    underscore: "../components/underscore/underscore",
-    backbone: "../components/backbone/backbone",
-    "backbone.viewdsl": "../components/backbone.viewdsl/backbone.viewdsl",
-    soundmanager2: "../components/soundmanager/script/soundmanager2",
-    youtubemanager: "../components/youtubemanager/lib/youtubemanager",
-    'songlocator-base': "../components/songlocator/lib/amd/songlocator-base",
-    'songlocator-youtube': "../components/songlocator/lib/amd/songlocator-youtube"
-  },
-  shim: {
-    backbone: {
-      exports: "Backbone",
-      deps: ["underscore", "jquery"]
-    },
-    underscore: {
-      exports: "_"
-    },
-    soundmanager2: {
-      exports: "soundManager"
-    }
-  }
-});
-
 define('xmlhttprequest', {
   XMLHttpRequest: XMLHttpRequest
 });
@@ -54,9 +28,7 @@ define(function(require, exports) {
 
     App.prototype.parameterizable = true;
 
-    App.prototype.render = function(partial) {
-      return this.renderDOM(partial);
-    };
+    App.prototype.template = "<article>\n  <view name=\"app:SearchBox\"></view>\n  <view name=\"app:ResultList\"></view>\n</article>\n\n<footer>\n  <div>\n    <h3>SongLocator</h3>\n    <p class=\"feedback\">\n      Have any feedback? Send me a <a\n          target=\"_blank\"\n          href=\"https://twitter.com/share?related=SongLocatorWeb&text=@SongLocatorWeb\"\n          class=\"twitter-share-button\"\n          data-lang=\"en\">tweet</a> or an\n      <a href=\"mailto:8mayday+songlocator@gmail.com\">email</a> message\n    </p>\n  </div>\n</footer>";
 
     return App;
 
@@ -268,12 +240,14 @@ define(function(require, exports) {
   };
   extend(window, exports);
   $(function() {
-    renderInPlace(document.body).done();
+    var app;
     soundManager.setup({
-      debugMode: false,
-      url: '../components/soundmanager/swf'
+      url: 'swf'
     });
-    return youtubeManager.setup();
+    youtubeManager.setup();
+    app = exports.app = new App();
+    app.render();
+    return document.body.appendChild(app.el);
   });
   return exports;
 });
