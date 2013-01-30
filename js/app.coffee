@@ -130,7 +130,8 @@ define (require, exports) ->
         width: 200
         height: 200
         url: this.model.linkUrl
-        whileplaying: => this.onPlaying()
+        whileplaying: =>
+          this.onPlaying()
         onstop: => this.$progress.width(0)
         onfinish: => this.$progress.width(0)
 
@@ -156,7 +157,6 @@ define (require, exports) ->
     resolver.search(qid, searchString)
 
   exports.resolve = (track, artist, album) ->
-    console.log 'resolve'
     qid = uniqueId('resolve')
     Events.trigger 'songlocator:resolve', qid, artist, track, album
     resolver.resolve(qid, track, artist, album)
