@@ -27,7 +27,7 @@ bootstrap:
 	bower install
 
 deploy:
-	git push origin master:gh-pages
+	(cd build/; git push origin gh-pages)
 
 build-js:
 	r.js -o ./build.js
