@@ -25,3 +25,6 @@ develop:
 
 bootstrap:
 	bower install
+
+deploy:
+	git push git@github.com:songlocator/songlocator.git master:gh-pages
