@@ -19132,12 +19132,14 @@ define('songlocator-base',['require','exports','module','xmlhttprequest'],functi
   2013 (c) Andrey Popp <8mayday@gmail.com>
 */
 
-var BaseResolver, EventEmitter, Module, ResolverSet, ResolverShortcuts, XMLHttpRequest, extend, idCounter, isArray, uniqueId, urlencode, xhrGET,
+var BaseResolver, EventEmitter, Module, ResolverSet, ResolverShortcuts, XMLHttpRequest, abs, bagOfWords, computeTensor, extend, idCounter, isArray, ngrams, norm, normBagOfWords, pow, rankSearchResult, spaceNormalizeRe, sumArray, tokenNormalizeRe, tokenize, uniqueId, urlencode, xhrGET,
   __slice = [].slice,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 XMLHttpRequest = XMLHttpRequest || require('xmlhttprequest').XMLHttpRequest;
+
+abs = Math.abs, pow = Math.pow;
 
 isArray = Array.isArray || function(obj) {
   return toString.call(obj) === '[object Array]';
@@ -19346,9 +19348,15 @@ BaseResolver = (function(_super) {
     return xhrGET(opts);
   };
 
-  BaseResolver.prototype.search = function(qid, query) {};
+  BaseResolver.prototype.search = function(qid, query) {
+    throw new Error('not implemented');
+  };
 
-  BaseResolver.prototype.resolve = function(qid, track, artist, album) {};
+  BaseResolver.prototype.resolve = function(qid, track, artist, album) {
+    var query;
+    query = (artist || '') + (track || '');
+    return this.search(qid, query.trim());
+  };
 
   BaseResolver.prototype.results = function(qid, results) {
     if (((results != null ? results.length : void 0) != null) && results.length > 0) {
@@ -19409,12 +19417,140 @@ ResolverSet = (function(_super) {
 
 })(Module);
 
+tokenNormalizeRe = /[^a-z0-9 ]+/g;
+
+spaceNormalizeRe = /[ \t\n]+/g;
+
+ngrams = function(toks, rank) {
+  var buf, ng, tok, _i, _len, _results;
+  if (rank == null) {
+    rank = 2;
+  }
+  buf = [];
+  _results = [];
+  for (_i = 0, _len = toks.length; _i < _len; _i++) {
+    tok = toks[_i];
+    buf.push(tok);
+    if (buf.length !== rank) {
+      continue;
+    }
+    ng = buf.join(' ');
+    buf.shift();
+    _results.push(ng);
+  }
+  return _results;
+};
+
+tokenize = function(str, ngram) {
+  if (ngram == null) {
+    ngram = 1;
+  }
+  return str.toLowerCase().replace(tokenNormalizeRe, ' ').replace(spaceNormalizeRe, ' ').split(' ').filter(function(tok) {
+    return tok && tok.length > 1;
+  });
+};
+
+bagOfWords = function(toks) {
+  var tok, v, _i, _len;
+  v = {};
+  for (_i = 0, _len = toks.length; _i < _len; _i++) {
+    tok = toks[_i];
+    if (v[tok]) {
+      v[tok] += 1;
+    } else {
+      v[tok] = 1;
+    }
+  }
+  return v;
+};
+
+computeTensor = function(str, ngramDim) {
+  var ngramRank, tensor, toks;
+  if (ngramDim == null) {
+    ngramDim = 1;
+  }
+  toks = tokenize(str);
+  tensor = (function() {
+    var _i, _results;
+    _results = [];
+    for (ngramRank = _i = 1; 1 <= ngramDim ? _i <= ngramDim : _i >= ngramDim; ngramRank = 1 <= ngramDim ? ++_i : --_i) {
+      _results.push(bagOfWords(ngramRank === 1 ? toks : ngrams(toks, ngramRank)));
+    }
+    return _results;
+  })();
+  return tensor;
+};
+
+normBagOfWords = function(v1, v2) {
+  var k, keys, ret, ws, x1, x2;
+  keys = (function() {
+    var _results;
+    _results = [];
+    for (k in extend({}, v1, v2)) {
+      _results.push(k);
+    }
+    return _results;
+  })();
+  ws = (function() {
+    var _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = keys.length; _i < _len; _i++) {
+      k = keys[_i];
+      x1 = v1[k] || 0;
+      x2 = v2[k] || 0;
+      _results.push(abs(x1 - x2));
+    }
+    return _results;
+  })();
+  ret = sumArray(ws);
+  return ret;
+};
+
+sumArray = function(ws) {
+  var n, w, _i, _len;
+  n = 0;
+  for (_i = 0, _len = ws.length; _i < _len; _i++) {
+    w = ws[_i];
+    n += w;
+  }
+  return n;
+};
+
+norm = function(t1, t2) {
+  var a, b, idx, ret, ws;
+  if (t1.length !== t2.length) {
+    throw new Error('invalid dimensions');
+  }
+  ws = (function() {
+    var _i, _len, _results;
+    _results = [];
+    for (idx = _i = 0, _len = t1.length; _i < _len; idx = ++_i) {
+      a = t1[idx];
+      b = t2[idx];
+      _results.push(normBagOfWords(a, b) * pow(100, idx));
+    }
+    return _results;
+  })();
+  ret = sumArray(ws);
+  return ret;
+};
+
+rankSearchResult = function(items, query, ngramRank) {
+  var queryT;
+  queryT = computeTensor(query, ngramRank);
+  items = items.slice().sort(function(a, b) {
+    return norm(computeTensor(a, ngramRank), queryT) - norm(computeTensor(b, ngramRank), queryT);
+  });
+  return items;
+};
+
 extend(exports, {
   extend: extend,
   urlencode: urlencode,
   xhrGET: xhrGET,
   uniqueId: uniqueId,
   isArray: isArray,
+  rankSearchResult: rankSearchResult,
   BaseResolver: BaseResolver,
   ResolverSet: ResolverSet,
   Module: Module
@@ -19689,6 +19825,512 @@ if (typeof window !== "undefined" && window !== null) {
 }
 });
 
+define('songlocator-tomahawk-shim',['require','exports','module','xmlhttprequest','songlocator-base'],function(require, exports, module) {
+// Generated by CoffeeScript 1.4.0
+/*
+  Shim which allows to re-use tomahawk resolvers almost "as-is".
+*/
+
+var BaseResolver, XMLHttpRequest, extend, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+XMLHttpRequest = XMLHttpRequest || require('xmlhttprequest').XMLHttpRequest;
+
+_ref = require('songlocator-base'), BaseResolver = _ref.BaseResolver, extend = _ref.extend;
+
+exports.window = typeof window !== "undefined" && window !== null ? window : {
+  localStorage: {},
+  sessionStorage: {}
+};
+
+exports.Tomahawk = {
+  resolver: {},
+  readBase64: function() {
+    return void 0;
+  },
+  extend: function(base, obj) {
+    var AdaptedResolver;
+    AdaptedResolver = (function(_super) {
+
+      __extends(AdaptedResolver, _super);
+
+      function AdaptedResolver(settings) {
+        if (settings == null) {
+          settings = {};
+        }
+        this.init();
+        this.settings = extend({}, this.settings || {}, settings);
+      }
+
+      return AdaptedResolver;
+
+    })(BaseResolver);
+    extend(AdaptedResolver.prototype, base, obj);
+    return AdaptedResolver;
+  },
+  log: function(message) {},
+  asyncRequest: function(url, callback, extraHeaders) {
+    var headerName, xmlHttpRequest, _i, _len;
+    xmlHttpRequest = new XMLHttpRequest();
+    xmlHttpRequest.open('GET', url, true);
+    if (extraHeaders) {
+      for (_i = 0, _len = extraHeaders.length; _i < _len; _i++) {
+        headerName = extraHeaders[_i];
+        xmlHttpRequest.setRequestHeader(headerName, extraHeaders[headerName]);
+      }
+    }
+    xmlHttpRequest.onreadystatechange = function() {
+      if (xmlHttpRequest.readyState === 4 && xmlHttpRequest.status === 200) {
+        return callback.call(exports.window, xmlHttpRequest);
+      } else if (xmlHttpRequest.readyState === 4) {
+        exports.Tomahawk.log("Failed to do GET request: to: " + url);
+        return exports.Tomahawk.log("Status Code was: " + xmlHttpRequest.status);
+      }
+    };
+    return xmlHttpRequest.send(null);
+  }
+};
+
+exports.TomahawkResolver = {
+  init: function() {},
+  scriptPath: function() {
+    return '';
+  },
+  getConfigUi: function() {
+    return {};
+  },
+  getUserConfig: function() {
+    return {};
+  },
+  saveUserConfig: function() {},
+  newConfigSaved: function() {},
+  resolve: function(qid, artist, album, title) {
+    return {
+      qid: qid
+    };
+  },
+  search: function(qid, searchString) {
+    return this.resolve(qid, "", "", searchString);
+  },
+  addTrackResults: function(results) {
+    if (results.results) {
+      results.results = results.results.filter(function(r) {
+        return r;
+      });
+    }
+    return this.emit('results', results);
+  }
+};
+});
+
+define('songlocator-tomahawk-soundcloud',['require','exports','module','./songlocator-tomahawk-shim','xmlhttprequest'],function(require, exports, module) {
+var tomahawkShim = require('./songlocator-tomahawk-shim');
+var Tomahawk = tomahawkShim.Tomahawk;
+var TomahawkResolver = tomahawkShim.TomahawkResolver;
+var window = tomahawkShim.window;
+var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+/*
+ * (c) 2012 thierry göckel <thierry@strayrayday.lu>
+ */
+var SoundcloudResolver = Tomahawk.extend(TomahawkResolver, {
+	
+	getConfigUi: function () {
+		var uiData = Tomahawk.readBase64("config.ui");
+		return {
+			"widget": uiData,
+			fields: [{
+				name: "includeCovers",
+				widget: "covers",
+				property: "checked"
+			}, {
+				name: "includeRemixes",
+				widget: "remixes",
+				property: "checked"
+			}, {
+				name: "includeLive",
+				widget: "live",
+				property: "checked"
+			}],
+			images: [{
+				"soundcloud.png" : Tomahawk.readBase64("soundcloud.png")
+			}]
+		};
+	},
+
+	newConfigSaved: function () {
+		var userConfig = this.getUserConfig();
+		if ((userConfig.includeCovers != this.includeCovers) || (userConfig.includeRemixes != this.includeRemixes) || (userConfig.includeLive != this.includeLive)) {
+			this.includeCovers = userConfig.includeCovers;
+			this.includeRemixes = userConfig.includeRemixes;
+			this.includeLive = userConfig.includeLive;
+			this.saveUserConfig();
+		}
+	},
+	
+	settings: {
+		name: 'SoundCloud',
+		icon: 'soundcloud-icon.png',
+		weight: 85,
+		timeout: 15
+	},
+	
+	init: function() {
+		// Set userConfig here
+		var userConfig = this.getUserConfig();
+		if ( userConfig !== undefined ){
+			this.includeCovers = userConfig.includeCovers;
+			this.includeRemixes = userConfig.includeRemixes;
+			this.includeLive = userConfig.includeLive;
+		}
+		else {
+			this.includeCovers = false;
+			this.includeRemixes = false;
+			this.includeLive = false;
+		}
+	
+	
+		String.prototype.capitalize = function(){
+			return this.replace( /(^|\s)([a-z])/g , function(m,p1,p2){ return p1+p2.toUpperCase(); } );
+		};
+	},	
+
+	getTrack: function (trackTitle, origTitle) {
+		if ((this.includeCovers === false || this.includeCovers === undefined) && trackTitle.search(/cover/i) !== -1 && origTitle.search(/cover/i) === -1){
+			return null;
+		}
+		if ((this.includeRemixes === false || this.includeRemixes === undefined) && trackTitle.search(/(re)*mix/i) !== -1 && origTitle.search(/(re)*mix/i) === -1){
+			return null;
+		}
+		if ((this.includeLive === false || this.includeLive === undefined) && trackTitle.search(/live/i) !== -1 && origTitle.search(/live/i) === -1){
+			return null;
+		}
+		else {
+			return trackTitle;
+		}
+	},
+
+	resolve: function (qid, artist, album, title)
+	{
+		if (artist !== "") {
+			query = encodeURIComponent(artist) + "+";
+		}
+		if (title !== "") {
+			query += encodeURIComponent(title);
+		}
+		var apiQuery = "http://api.soundcloud.com/tracks.json?consumer_key=TiNg2DRYhBnp01DA3zNag&filter=streamable&q=" + query;
+		var that = this;
+		var empty = {
+			results: [],
+			qid: qid
+		};
+		Tomahawk.asyncRequest(apiQuery, function (xhr) {
+			var resp = JSON.parse(xhr.responseText);
+			if (resp.length !== 0){
+				var results = [];
+				for (i = 0; i < resp.length; i++) {
+					// Need some more validation here
+					// This doesnt help it seems, or it just throws the error anyhow, and skips?
+					if (resp[i] === undefined){
+						continue;
+					}
+
+					if (!resp[i].streamable){ // Check for streamable tracks only
+						continue;
+					}
+
+					// Check whether the artist and title (if set) are in the returned title, discard otherwise
+					// But also, the artist could be the username
+					if (resp[i].title !== undefined && (resp[i].title.toLowerCase().indexOf(artist.toLowerCase()) === -1 || resp[i].title.toLowerCase().indexOf(title.toLowerCase()) === -1)) {
+						continue;
+					}
+					var result = new Object();
+					result.artist = artist;
+					if (that.getTrack(resp[i].title, title)){
+						result.track = title;
+					}
+					else {
+						continue;
+					}
+
+					result.source = that.settings.name;
+					result.mimetype = "audio/mpeg";
+					result.bitrate = 128;
+					result.duration = resp[i].duration / 1000;
+					result.score = 0.85;
+					result.year = resp[i].release_year;
+					result.url = resp[i].stream_url + ".json?client_id=TiNg2DRYhBnp01DA3zNag";
+					if (resp[i].permalink_url !== undefined) result.linkUrl = resp[i].permalink_url;
+					results.push(result);
+				}
+				var return1 = {
+					qid: qid,
+					results: [results[0]]
+				};
+				((typeof that === 'undefined')?this:that).addTrackResults(return1);
+			}
+			else {
+				((typeof that === 'undefined')?this:that).addTrackResults(empty);
+			}
+		});
+	},
+	
+	search: function (qid, searchString)
+	{
+		var apiQuery = "http://api.soundcloud.com/tracks.json?consumer_key=TiNg2DRYhBnp01DA3zNag&filter=streamable&q=" + encodeURIComponent(searchString.replace('"', '').replace("'", ""));
+		var that = this;
+		var empty = {
+			results: [],
+			qid: qid
+		};
+		Tomahawk.asyncRequest(apiQuery, function (xhr) {
+			var resp = JSON.parse(xhr.responseText);
+			if (resp.length !== 0){
+				var results = [];
+				var stop = resp.length;
+				for (i = 0; i < resp.length; i++) {
+					if(resp[i] === undefined){
+						stop = stop - 1;
+						continue;
+					}
+					var result = new Object();
+
+					if (that.getTrack(resp[i].title, "")){
+						var track = resp[i].title;
+						if (track.indexOf(" - ") !== -1 && track.slice(track.indexOf(" - ") + 3).trim() !== ""){
+							result.track = track.slice(track.indexOf(" - ") + 3).trim();
+							result.artist = track.slice(0, track.indexOf(" - ")).trim();
+						}
+						else if (track.indexOf(" -") !== -1 && track.slice(track.indexOf(" -") + 2).trim() !== ""){
+							result.track = track.slice(track.indexOf(" -") + 2).trim();
+							result.artist = track.slice(0, track.indexOf(" -")).trim();
+						}
+						else if (track.indexOf(": ") !== -1 && track.slice(track.indexOf(": ") + 2).trim() !== ""){
+							result.track = track.slice(track.indexOf(": ") + 2).trim();
+							result.artist = track.slice(0, track.indexOf(": ")).trim();
+						}
+						else if (track.indexOf("-") !== -1 && track.slice(track.indexOf("-") + 1).trim() !== ""){
+							result.track = track.slice(track.indexOf("-") + 1).trim();
+							result.artist = track.slice(0, track.indexOf("-")).trim();
+						}
+						else if (track.indexOf(":") !== -1 && track.slice(track.indexOf(":") + 1).trim() !== ""){
+							result.track = track.slice(track.indexOf(":") + 1).trim();
+							result.artist = track.slice(0, track.indexOf(":")).trim();
+						}
+						else if (track.indexOf("\u2014") !== -1 && track.slice(track.indexOf("\u2014") + 2).trim() !== ""){
+							result.track = track.slice(track.indexOf("\u2014") + 2).trim();
+							result.artist = track.slice(0, track.indexOf("\u2014")).trim();
+						}
+						else if (resp[i].title !== "" && resp[i].user.username !== ""){
+							// Last resort, the artist is the username
+							result.track = resp[i].title;
+							result.artist = resp[i].user.username;
+						}
+						else {
+							stop = stop - 1;
+							continue;
+						}
+					}
+					else {
+						stop = stop - 1;
+						continue;
+					}
+
+					result.source = that.settings.name;
+					result.mimetype = "audio/mpeg";
+					result.bitrate = 128;
+					result.duration = resp[i].duration / 1000;
+					result.score = 0.85;
+					result.year = resp[i].release_year;
+					result.url = resp[i].stream_url + ".json?client_id=TiNg2DRYhBnp01DA3zNag";
+					if (resp[i].permalink_url !== undefined) result.linkUrl = resp[i].permalink_url;
+					
+					(function (i, result) {
+						var artist = encodeURIComponent(result.artist.capitalize());
+						var url = "http://developer.echonest.com/api/v4/artist/extract?api_key=JRIHWEP6GPOER2QQ6&format=json&results=1&sort=hotttnesss-desc&text=" + artist;
+						var xhr = new XMLHttpRequest();
+						xhr.open('GET', url, true);
+						xhr.onreadystatechange = function() {
+								if (xhr.readyState === 4){
+									if (xhr.status === 200) {
+										var response = JSON.parse(xhr.responseText).response;
+										if (response && response.artists && response.artists.length > 0) {
+											artist = response.artists[0].name;
+											result.artist = artist;
+											result.id = i;
+											results.push(result);
+											stop = stop - 1;
+										}
+										else {
+											stop = stop - 1;
+										}
+										if (stop === 0) {
+											function sortResults(a, b){
+												return a.id - b.id;
+											}
+											results = results.sort(sortResults);
+											for (var j = 0; j < results.length; j++){
+												delete results[j].id;
+											}
+											var toReturn = {
+												results: results,
+												qid: qid
+											};
+											((typeof that === 'undefined')?this:that).addTrackResults(toReturn);
+										}
+									}
+									else {
+										Tomahawk.log("Failed to do GET request to: " + url);
+										Tomahawk.log("Error: " + xhr.status + " " + xhr.statusText);
+									}
+								}
+						};
+						xhr.send(null);
+					})(i, result);	
+				}
+				if (stop === 0){
+					((typeof that === 'undefined')?this:that).addTrackResults(empty);
+				}
+			}
+			else {
+				((typeof that === 'undefined')?this:that).addTrackResults(empty);
+			}
+		});
+	}
+});
+
+Tomahawk.resolver.instance = SoundcloudResolver;
+exports.Resolver = Tomahawk.resolver.instance;
+if (window !== undefined) {
+  window.SongLocator = window.SongLocator || {};
+  window.SongLocator.Tomahawk = window.SongLocator.Tomahawk || {};
+  window.SongLocator.Tomahawk.soundcloud = {Resolver: exports.Resolver};
+}
+});
+
+define('songlocator-tomahawk-exfm',['require','exports','module','./songlocator-tomahawk-shim','xmlhttprequest'],function(require, exports, module) {
+var tomahawkShim = require('./songlocator-tomahawk-shim');
+var Tomahawk = tomahawkShim.Tomahawk;
+var TomahawkResolver = tomahawkShim.TomahawkResolver;
+var window = tomahawkShim.window;
+var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+/*
+ * (c) 2011 lasconic <lasconic@gmail.com>
+ */
+var ExfmResolver = Tomahawk.extend(TomahawkResolver, {
+	settings: {
+		name: 'Ex.fm',
+		icon: 'exfm-icon.png',
+		weight: 30,
+		timeout: 5
+	},
+
+	resolve: function (qid, artist, album, title) {
+		// build query to 4shared
+		var url = "http://ex.fm/api/v3/song/search/";
+
+		url += encodeURIComponent(title);
+
+		url += "?start=0&results=20";
+		
+		// send request and parse it into javascript
+		var that = this;
+		var xmlString = Tomahawk.asyncRequest(url, function(xhr) {
+			// parse json
+			var response = JSON.parse(xhr.responseText);
+
+			var results = new Array();
+			
+			// check the response
+			if (response.results > 0) {
+				var songs = response.songs;
+
+				// walk through the results and store it in 'results'
+				for (var i = 0; i < songs.length; i++) {
+					var song = songs[i];
+					var result = new Object();
+					if(song.url.indexOf("http://api.soundcloud") === 0){ // unauthorised, use soundcloud resolver instead
+						continue;
+					}
+					
+					if (song.artist !== null){
+						
+						if (song.title !== null){
+							
+							var dTitle = "";
+							if (song.title.indexOf("\n") !== -1){
+								var stringArray = song.title.split("\n");
+								var newTitle = "";
+								for (var j = 0; j < stringArray.length; j++){
+									newTitle += stringArray[j].trim() + " ";
+								}
+								dTitle = newTitle.trim();
+							}
+							else {
+								dTitle = song.title;
+							}
+							
+							dTitle = dTitle.replace("\u2013","").replace("  ", " ").replace("\u201c","").replace("\u201d","");
+							if (dTitle.toLowerCase().indexOf(song.artist.toLowerCase() + " -") === 0){
+								dTitle = dTitle.slice(song.artist.length + 2).trim();
+							}
+							else if (dTitle.toLowerCase().indexOf(song.artist.toLowerCase() + "-") === 0){
+								dTitle = dTitle.slice(song.artist.length + 1).trim();
+							}
+							else if (dTitle.toLowerCase() === song.artist.toLowerCase()){
+								continue;
+							}
+							else if (dTitle.toLowerCase().indexOf(song.artist.toLowerCase()) === 0){
+								dTitle = dTitle.slice(song.artist.length).trim();
+							}
+							var dArtist = song.artist;
+						}
+					}
+					else {
+						continue;
+					}
+					if (song.album !== null){
+						var dAlbum = song.album;     
+					}
+					if (dTitle.toLowerCase().indexOf(title.toLowerCase()) !== -1 && dArtist.toLowerCase().indexOf(artist.toLowerCase()) !== -1 || artist === "" && album === ""){
+						result.artist = ((dArtist !== "")? dArtist:artist);
+						result.album = ((dAlbum !== "")? dAlbum:album);
+						result.track = ((dTitle !== "")? dTitle:title);
+						result.source = that.settings.name;
+						result.url = song.url;
+						result.extension = "mp3";
+						result.score = 0.80;
+						results.push(result);
+					}
+					if (artist !== "") { // resolve, return only one result
+						break;
+					}
+				}
+			}
+
+			var return1 = {
+				qid: qid,
+				results: results
+			};
+			((typeof that === 'undefined')?this:that).addTrackResults(return1);
+		});
+	},
+
+	search: function (qid, searchString) {
+		this.settings.strictMatch = false;
+		this.resolve(qid, "", "", searchString);
+	}
+});
+
+Tomahawk.resolver.instance = ExfmResolver;
+exports.Resolver = Tomahawk.resolver.instance;
+if (window !== undefined) {
+  window.SongLocator = window.SongLocator || {};
+  window.SongLocator.Tomahawk = window.SongLocator.Tomahawk || {};
+  window.SongLocator.Tomahawk.exfm = {Resolver: exports.Resolver};
+}
+});
+
 // Generated by CoffeeScript 1.4.0
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -19697,8 +20339,8 @@ define('xmlhttprequest', {
   XMLHttpRequest: XMLHttpRequest
 });
 
-define('app',['require','exports','module','backbone.viewdsl','underscore','backbone','soundmanager2','youtubemanager','songlocator-base','songlocator-youtube'],function(require, exports) {
-  var Events, ResolverSet, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
+define('app',['require','exports','module','backbone.viewdsl','underscore','backbone','soundmanager2','youtubemanager','songlocator-base','songlocator-youtube','songlocator-tomahawk-soundcloud','songlocator-tomahawk-exfm'],function(require, exports) {
+  var Events, ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
   _ref = require('backbone.viewdsl'), View = _ref.View, renderInPlace = _ref.renderInPlace;
   _ref1 = require('underscore'), extend = _ref1.extend, uniqueId = _ref1.uniqueId;
   Events = require('backbone').Events;
@@ -19706,7 +20348,9 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
   youtubeManager = require('youtubemanager');
   ResolverSet = require('songlocator-base').ResolverSet;
   YouTubeResolver = require('songlocator-youtube').Resolver;
-  exports.resolver = new ResolverSet(new YouTubeResolver());
+  SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver;
+  ExfmResolver = require('songlocator-tomahawk-exfm').Resolver;
+  exports.resolver = new ResolverSet(new YouTubeResolver(), new ExfmResolver());
   exports.App = (function(_super) {
 
     __extends(App, _super);
@@ -19867,7 +20511,7 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
         playerId: this.playerId,
         width: 200,
         height: 200,
-        url: this.model.linkUrl,
+        url: this.model.url || this.model.linkUrl,
         whileplaying: function() {
           return _this.onPlaying();
         },

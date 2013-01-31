@@ -8,8 +8,12 @@ define (require, exports) ->
   youtubeManager = require 'youtubemanager'
   {ResolverSet} = require 'songlocator-base'
   YouTubeResolver = require('songlocator-youtube').Resolver
+  SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver
+  ExfmResolver = require('songlocator-tomahawk-exfm').Resolver
 
-  exports.resolver = new ResolverSet(new YouTubeResolver())
+  exports.resolver = new ResolverSet(
+    new YouTubeResolver(),
+    new ExfmResolver())
 
   class exports.App extends View
     className: 'app'
@@ -127,7 +131,7 @@ define (require, exports) ->
         playerId: this.playerId
         width: 200
         height: 200
-        url: this.model.linkUrl
+        url: this.model.url or this.model.linkUrl
         whileplaying: => this.onPlaying()
         onstop: => this.stop()
         onfinish: => this.stop()

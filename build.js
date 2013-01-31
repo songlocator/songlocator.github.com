@@ -13,7 +13,10 @@
     "soundmanager2": "../components/soundmanager/script/soundmanager2",
     "youtubemanager": "../components/youtubemanager/lib/youtubemanager",
     'songlocator-base': "../components/songlocator/lib/amd/songlocator-base",
-    'songlocator-youtube': "../components/songlocator/lib/amd/songlocator-youtube"
+    'songlocator-youtube': "../components/songlocator/lib/amd/songlocator-youtube",
+    "songlocator-tomahawk-shim": "../components/songlocator-tomahawk/lib/amd/songlocator-tomahawk-shim",
+    "songlocator-tomahawk-soundcloud": "../components/songlocator-tomahawk/lib/amd/songlocator-tomahawk-soundcloud",
+    "songlocator-tomahawk-exfm": "../components/songlocator-tomahawk/lib/amd/songlocator-tomahawk-exfm"
   },
   "shim": {
     "backbone": {

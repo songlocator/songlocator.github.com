@@ -10,6 +10,7 @@
     "underscore": "~1.4.3",
     "soundmanager": "",
     "youtubemanager": "0.1.0",
-    "songlocator": "0.1.0"
+    "songlocator": "0.1.0",
+    "songlocator-tomahawk": "0.1.0"
   }
 }

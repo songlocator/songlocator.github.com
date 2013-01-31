@@ -7,7 +7,7 @@ define('xmlhttprequest', {
 });
 
 define(function(require, exports) {
-  var Events, ResolverSet, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
+  var Events, ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
   _ref = require('backbone.viewdsl'), View = _ref.View, renderInPlace = _ref.renderInPlace;
   _ref1 = require('underscore'), extend = _ref1.extend, uniqueId = _ref1.uniqueId;
   Events = require('backbone').Events;
@@ -15,7 +15,9 @@ define(function(require, exports) {
   youtubeManager = require('youtubemanager');
   ResolverSet = require('songlocator-base').ResolverSet;
   YouTubeResolver = require('songlocator-youtube').Resolver;
-  exports.resolver = new ResolverSet(new YouTubeResolver());
+  SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver;
+  ExfmResolver = require('songlocator-tomahawk-exfm').Resolver;
+  exports.resolver = new ResolverSet(new YouTubeResolver(), new ExfmResolver());
   exports.App = (function(_super) {
 
     __extends(App, _super);
@@ -176,7 +178,7 @@ define(function(require, exports) {
         playerId: this.playerId,
         width: 200,
         height: 200,
-        url: this.model.linkUrl,
+        url: this.model.url || this.model.linkUrl,
         whileplaying: function() {
           return _this.onPlaying();
         },
