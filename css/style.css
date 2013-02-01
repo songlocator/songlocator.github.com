@@ -1034,7 +1034,8 @@ a {
         text-align: center;
         position: relative;
         top: 50px;
-        width: 100%; }
+        width: 100%;
+        opacity: 0.6; }
       .song .box .controls-wrapper .icon-play {
         display: block; }
       .song .box .controls-wrapper .icon-pause {

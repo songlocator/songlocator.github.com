@@ -12,6 +12,7 @@ define (require, exports) ->
 
   exports.resolver = new ResolverSet(
     new YouTubeResolver(),
+    new SoundCloudResolver(),
     new ExfmResolver())
 
   class exports.App extends View

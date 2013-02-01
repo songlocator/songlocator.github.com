@@ -16,7 +16,7 @@ define(function(require, exports) {
   YouTubeResolver = require('songlocator-youtube').Resolver;
   SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver;
   ExfmResolver = require('songlocator-tomahawk-exfm').Resolver;
-  exports.resolver = new ResolverSet(new YouTubeResolver(), new ExfmResolver());
+  exports.resolver = new ResolverSet(new YouTubeResolver(), new SoundCloudResolver(), new ExfmResolver());
   exports.App = (function(_super) {
 
     __extends(App, _super);

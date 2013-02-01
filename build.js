@@ -3,7 +3,10 @@
   "include": "app",
   "out": "js/app.build.js",
   "insertRequire": ["app"],
-  "optimize": "none",
+  "optimize": "uglify",
+  "uglify": {
+    "ascii_only": true,
+  },
   "baseUrl": "js",
   "paths": {
     "jquery": "../components/jquery/jquery",
