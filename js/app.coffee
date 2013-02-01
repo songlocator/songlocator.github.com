@@ -150,7 +150,7 @@ define (require, exports) ->
     onPlaying: ->
       totalWidth = this.$el.width()
       duration = this.sound.durationEstimate or this.sound.duration
-      soFar = (this.sound.position / sound)
+      soFar = (this.sound.position / duration)
       this.$progress.width(soFar * totalWidth)
 
     createSound: ->

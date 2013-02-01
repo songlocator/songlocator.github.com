@@ -201,7 +201,7 @@ define(function(require, exports) {
       var duration, soFar, totalWidth;
       totalWidth = this.$el.width();
       duration = this.sound.durationEstimate || this.sound.duration;
-      soFar = this.sound.position / sound;
+      soFar = this.sound.position / duration;
       return this.$progress.width(soFar * totalWidth);
     };
 
