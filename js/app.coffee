@@ -3,7 +3,6 @@ define('xmlhttprequest', {XMLHttpRequest})
 define (require, exports) ->
   {View, renderInPlace} = require 'backbone.viewdsl'
   {extend, uniqueId} = require 'underscore'
-  {Events} = require 'backbone'
   soundManager = require 'soundmanager2'
   youtubeManager = require 'youtubemanager'
   {ResolverSet} = require 'songlocator-base'
@@ -63,7 +62,7 @@ define (require, exports) ->
         for r in result.results
           this.renderResult(r)
 
-      Events.on 'songlocator:search songlocator:resolve', (qid) =>
+      app.on 'songlocator:search songlocator:resolve', (qid) =>
         this.reset(qid)
 
     renderResult: (result) ->
@@ -111,7 +110,7 @@ define (require, exports) ->
           this.stop()
 
     initialize: ->
-      Events.on 'songlocator:play', (sound) =>
+      app.on 'songlocator:play', (sound) =>
         this.stop() if sound != this.sound
 
     stop: ->
@@ -141,7 +140,7 @@ define (require, exports) ->
       this.$el.addClass('playing')
       this.sound = this.createSound() unless this.sound
       this.sound.play()
-      Events.trigger 'songlocator:play', this.sound
+      app.trigger 'songlocator:play', this.sound
 
     remove: ->
       super
@@ -154,12 +153,12 @@ define (require, exports) ->
 
   exports.search = (searchString) ->
     qid = uniqueId('search')
-    Events.trigger 'songlocator:search', qid, searchString
+    app.trigger 'songlocator:search', qid, searchString
     resolver.search(qid, searchString)
 
   exports.resolve = (track, artist, album) ->
     qid = uniqueId('resolve')
-    Events.trigger 'songlocator:resolve', qid, artist, track, album
+    app.trigger 'songlocator:resolve', qid, artist, track, album
     resolver.resolve(qid, track, artist, album)
 
   exports.player =
@@ -170,13 +169,12 @@ define (require, exports) ->
       else
         soundManager.createSound(options)
 
-  extend(window, exports)
-
   $ ->
     soundManager.setup(url: 'swf')
     youtubeManager.setup()
-    app = exports.app = new App()
+    exports.app = app = new App()
     app.render()
     document.body.appendChild(app.el)
 
+  extend(window, exports)
   exports

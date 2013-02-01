@@ -7,10 +7,9 @@ define('xmlhttprequest', {
 });
 
 define(function(require, exports) {
-  var Events, ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
+  var ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
   _ref = require('backbone.viewdsl'), View = _ref.View, renderInPlace = _ref.renderInPlace;
   _ref1 = require('underscore'), extend = _ref1.extend, uniqueId = _ref1.uniqueId;
-  Events = require('backbone').Events;
   soundManager = require('soundmanager2');
   youtubeManager = require('youtubemanager');
   ResolverSet = require('songlocator-base').ResolverSet;
@@ -97,7 +96,7 @@ define(function(require, exports) {
         }
         return _results;
       });
-      return Events.on('songlocator:search songlocator:resolve', function(qid) {
+      return app.on('songlocator:search songlocator:resolve', function(qid) {
         return _this.reset(qid);
       });
     };
@@ -148,7 +147,7 @@ define(function(require, exports) {
 
     SongView.prototype.initialize = function() {
       var _this = this;
-      return Events.on('songlocator:play', function(sound) {
+      return app.on('songlocator:play', function(sound) {
         if (sound !== _this.sound) {
           return _this.stop();
         }
@@ -198,7 +197,7 @@ define(function(require, exports) {
         this.sound = this.createSound();
       }
       this.sound.play();
-      return Events.trigger('songlocator:play', this.sound);
+      return app.trigger('songlocator:play', this.sound);
     };
 
     SongView.prototype.remove = function() {
@@ -222,13 +221,13 @@ define(function(require, exports) {
   exports.search = function(searchString) {
     var qid;
     qid = uniqueId('search');
-    Events.trigger('songlocator:search', qid, searchString);
+    app.trigger('songlocator:search', qid, searchString);
     return resolver.search(qid, searchString);
   };
   exports.resolve = function(track, artist, album) {
     var qid;
     qid = uniqueId('resolve');
-    Events.trigger('songlocator:resolve', qid, artist, track, album);
+    app.trigger('songlocator:resolve', qid, artist, track, album);
     return resolver.resolve(qid, track, artist, album);
   };
   exports.player = {
@@ -240,16 +239,16 @@ define(function(require, exports) {
       }
     }
   };
-  extend(window, exports);
   $(function() {
     var app;
     soundManager.setup({
       url: 'swf'
     });
     youtubeManager.setup();
-    app = exports.app = new App();
+    exports.app = app = new App();
     app.render();
     return document.body.appendChild(app.el);
   });
+  extend(window, exports);
   return exports;
 });
