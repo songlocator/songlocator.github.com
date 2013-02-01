@@ -83,7 +83,7 @@ define (require, exports) ->
     isPlaying: false
     template: """
       <span class="source">
-        <a target="_blank" attr-href="{{model.linkUrl}}">{{model.source}}</a>
+        <a target="_blank" attr-href="model.linkUrl">{{model.source}}</a>
       </span>
       <div class="metadata-line">
         <span class="track">{{model.track}}</span>
@@ -93,6 +93,10 @@ define (require, exports) ->
       <div element-id="$box" class="box">
         <div class="cover-wrapper">
           <div element-id="$cover"></div>
+        </div>
+        <div class="controls-wrapper">
+          <i class="icon-play"></i>
+          <i class="icon-pause"></i>
         </div>
         <div class="metadata-wrapper">
           <div class="track">{{model.track}}</div>
@@ -105,18 +109,42 @@ define (require, exports) ->
       click: ->
         if not this.isPlaying
           this.play()
-        else
-          this.stop()
+
+      'click .controls-wrapper': (e) ->
+        e.stopPropagation()
+        this.togglePause()
 
     initialize: ->
       app.on 'songlocator:play', (sound) =>
         this.stop() if sound != this.sound
 
+    play: ->
+      this.isPlaying = true
+      this.$el.addClass('playing')
+      this.$el.addClass('openned')
+      this.sound = this.createSound() unless this.sound
+      this.sound.play()
+      app.trigger 'songlocator:play', this.sound
+
     stop: ->
       this.$progress.width(0)
       this.$el.removeClass('playing')
+      this.$el.removeClass('openned')
       this.isPlaying = false
       this.sound.stop() if this.sound
+
+    resume: ->
+      this.isPlaying = true
+      this.$el.addClass('playing')
+      this.sound.resume()
+
+    pause: ->
+      this.isPlaying = false
+      this.$el.removeClass('playing')
+      this.sound.pause()
+
+    togglePause: ->
+      if this.isPlaying then this.pause() else this.resume()
 
     onPlaying: ->
       totalWidth = this.$el.width()
@@ -135,13 +163,6 @@ define (require, exports) ->
         whileplaying: => this.onPlaying()
         onstop: => this.stop()
         onfinish: => this.stop()
-
-    play: ->
-      this.isPlaying = true
-      this.$el.addClass('playing')
-      this.sound = this.createSound() unless this.sound
-      this.sound.play()
-      app.trigger 'songlocator:play', this.sound
 
     remove: ->
       super

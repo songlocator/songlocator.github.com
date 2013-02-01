@@ -1,5 +1,6 @@
 @import "compass/reset"
 @import "compass/css3"
+@import "font-awesome"
 @import url(http://fonts.googleapis.com/css?family=Open+Sans:300,700&subset=latin,cyrillic)
 
 $bg: #f4f4f4
@@ -118,22 +119,44 @@ a
   font-size: 80%
   color: lighten($color, 10%)
   position: relative
-  cursor: pointer
+
+  .metadata-line
+    cursor: pointer
 
   .box
     display: none
     height: 200px
     background: lighten($bg, 10%)
+    position: relative
 
     .cover-wrapper
       float: left
       width: 200px
       height: 200px
+      background: darken($bg, 10%)
 
     .metadata-wrapper
       float: left
       font-size: 180%
       padding: 10px
+
+    .controls-wrapper
+      position: absolute
+      width: 200px
+      height: 200px
+      font-size: 100px
+      cursor: pointer
+      color: $bg
+
+      i
+        text-align: center
+        position: relative
+        top: 50px
+        width: 100%
+      .icon-play
+        display: block
+      .icon-pause
+        display: none
 
   .progress
     display: none
@@ -142,7 +165,7 @@ a
     height: 6px
     background: darken($bg, 30%)
 
-  &.playing
+  &.openned
     .box
       display: block
     .progress
@@ -152,6 +175,13 @@ a
     &:hover
       background: none
       color: $color
+
+  &.playing
+    .controls-wrapper
+      .icon-play
+        display: none
+      .icon-pause
+        display: block
 
   &:hover
     background: lighten($color, 10%)

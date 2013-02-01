@@ -9,7 +9,7 @@
     "backbone.viewdsl": "~0.8.1",
     "underscore": "~1.4.3",
     "soundmanager": "",
-    "youtubemanager": "0.1.0",
+    "youtubemanager": "0.3.0",
     "songlocator": "0.1.0",
     "songlocator-tomahawk": "0.1.0"
   }

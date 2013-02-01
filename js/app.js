@@ -133,15 +133,17 @@ define(function(require, exports) {
 
     SongView.prototype.isPlaying = false;
 
-    SongView.prototype.template = "<span class=\"source\">\n  <a target=\"_blank\" attr-href=\"{{model.linkUrl}}\">{{model.source}}</a>\n</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
+    SongView.prototype.template = "<span class=\"source\">\n  <a target=\"_blank\" attr-href=\"model.linkUrl\">{{model.source}}</a>\n</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"controls-wrapper\">\n    <i class=\"icon-play\"></i>\n    <i class=\"icon-pause\"></i>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
 
     SongView.prototype.events = {
       click: function() {
         if (!this.isPlaying) {
           return this.play();
-        } else {
-          return this.stop();
         }
+      },
+      'click .controls-wrapper': function(e) {
+        e.stopPropagation();
+        return this.togglePause();
       }
     };
 
@@ -154,12 +156,44 @@ define(function(require, exports) {
       });
     };
 
+    SongView.prototype.play = function() {
+      this.isPlaying = true;
+      this.$el.addClass('playing');
+      this.$el.addClass('openned');
+      if (!this.sound) {
+        this.sound = this.createSound();
+      }
+      this.sound.play();
+      return app.trigger('songlocator:play', this.sound);
+    };
+
     SongView.prototype.stop = function() {
       this.$progress.width(0);
       this.$el.removeClass('playing');
+      this.$el.removeClass('openned');
       this.isPlaying = false;
       if (this.sound) {
         return this.sound.stop();
+      }
+    };
+
+    SongView.prototype.resume = function() {
+      this.isPlaying = true;
+      this.$el.addClass('playing');
+      return this.sound.resume();
+    };
+
+    SongView.prototype.pause = function() {
+      this.isPlaying = false;
+      this.$el.removeClass('playing');
+      return this.sound.pause();
+    };
+
+    SongView.prototype.togglePause = function() {
+      if (this.isPlaying) {
+        return this.pause();
+      } else {
+        return this.resume();
       }
     };
 
@@ -188,16 +222,6 @@ define(function(require, exports) {
           return _this.stop();
         }
       });
-    };
-
-    SongView.prototype.play = function() {
-      this.isPlaying = true;
-      this.$el.addClass('playing');
-      if (!this.sound) {
-        this.sound = this.createSound();
-      }
-      this.sound.play();
-      return app.trigger('songlocator:play', this.sound);
     };
 
     SongView.prototype.remove = function() {

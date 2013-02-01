@@ -12620,7 +12620,7 @@ var __slice = [].slice,
     return root.Backbone.ViewDSL = factory(root.jQuery, root.Backbone, root._);
   }
 })(this, function(jQuery, Backbone, _) {
-  var Promise, View, consumeViewParams, getByPath, getBySpec, hypensToCamelCase, instantiateView, isPromise, join, process, processAttrRe, processAttributes, processNode, processTextNode, promise, promiseRequire, render, renderInPlace, replaceChild, textNodeSplitRe, toArray, wrapInFragment, wrapTemplate;
+  var ParameterizableView, Promise, View, consumeViewParams, getByPath, getBySpec, hypensToCamelCase, instantiateView, isPromise, join, process, processAttrRe, processAttributes, processNode, processTextNode, promise, promiseRequire, render, renderInPlace, replaceChild, textNodeSplitRe, toArray, wrapInFragment, wrapTemplate;
   Promise = (function() {
     var invokeCallback, noop, reject, resolve;
 
@@ -13187,8 +13187,33 @@ var __slice = [].slice,
     return View;
 
   })(Backbone.View);
+  ParameterizableView = (function(_super) {
+
+    __extends(ParameterizableView, _super);
+
+    function ParameterizableView() {
+      return ParameterizableView.__super__.constructor.apply(this, arguments);
+    }
+
+    ParameterizableView.prototype.parameterizable = true;
+
+    ParameterizableView.prototype.render = function(partial, localContext) {
+      if (this.template) {
+        localContext = _.extend({}, localContext, {
+          partial: this.renderTemplate(partial)
+        });
+        return ParameterizableView.__super__.render.call(this, localContext);
+      } else {
+        return this.renderDOM(partial);
+      }
+    };
+
+    return ParameterizableView;
+
+  })(View);
   return {
     View: View,
+    ParameterizableView: ParameterizableView,
     render: render,
     renderInPlace: renderInPlace,
     wrapTemplate: wrapTemplate
@@ -18923,6 +18948,7 @@ YoutubeSound = (function() {
     this.playState = void 0;
     this.position = 0;
     this.readyState = 0;
+    this._autoPlay = this.options.autoPlay;
     this._poller = void 0;
     this._previousState = void 0;
     videoId = options.youtubeVideoId || extractIdRe.exec(options.url)[1];
@@ -18953,7 +18979,7 @@ YoutubeSound = (function() {
 
   YoutubeSound.prototype.onReady = function() {
     this.duration = this.durationEstimate = this.player.getDuration() * 1000;
-    if (this.options.autoPlay) {
+    if (this._autoPlay) {
       return this.play();
     }
   };
@@ -19027,14 +19053,18 @@ YoutubeSound = (function() {
   };
 
   YoutubeSound.prototype.pause = function() {
-    return this.player.pauseVideo();
+    if (this.player.pauseVideo != null) {
+      return this.player.pauseVideo();
+    } else {
+      return this._autoPlay = false;
+    }
   };
 
   YoutubeSound.prototype.play = function() {
     if (this.player.playVideo != null) {
       return this.player.playVideo();
     } else {
-      return this.options.autoPlay = true;
+      return this._autoPlay = true;
     }
   };
 
@@ -19053,8 +19083,13 @@ YoutubeSound = (function() {
   };
 
   YoutubeSound.prototype.stop = function() {
-    this.player.stopVideo();
-    return this.position = 0;
+    if (this.player.stopVideo != null) {
+      this.player.seekTo(0);
+      this.player.stopVideo();
+      return this.position = 0;
+    } else {
+      return this._autoPlay = false;
+    }
   };
 
   YoutubeSound.prototype.toggleMute = function() {
@@ -20339,11 +20374,10 @@ define('xmlhttprequest', {
   XMLHttpRequest: XMLHttpRequest
 });
 
-define('app',['require','exports','module','backbone.viewdsl','underscore','backbone','soundmanager2','youtubemanager','songlocator-base','songlocator-youtube','songlocator-tomahawk-soundcloud','songlocator-tomahawk-exfm'],function(require, exports) {
-  var Events, ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
+define('app',['require','exports','module','backbone.viewdsl','underscore','soundmanager2','youtubemanager','songlocator-base','songlocator-youtube','songlocator-tomahawk-soundcloud','songlocator-tomahawk-exfm'],function(require, exports) {
+  var ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
   _ref = require('backbone.viewdsl'), View = _ref.View, renderInPlace = _ref.renderInPlace;
   _ref1 = require('underscore'), extend = _ref1.extend, uniqueId = _ref1.uniqueId;
-  Events = require('backbone').Events;
   soundManager = require('soundmanager2');
   youtubeManager = require('youtubemanager');
   ResolverSet = require('songlocator-base').ResolverSet;
@@ -20430,7 +20464,7 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
         }
         return _results;
       });
-      return Events.on('songlocator:search songlocator:resolve', function(qid) {
+      return app.on('songlocator:search songlocator:resolve', function(qid) {
         return _this.reset(qid);
       });
     };
@@ -20467,33 +20501,67 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
 
     SongView.prototype.isPlaying = false;
 
-    SongView.prototype.template = "<span class=\"source\">\n  <a target=\"_blank\" attr-href=\"{{model.linkUrl}}\">{{model.source}}</a>\n</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
+    SongView.prototype.template = "<span class=\"source\">\n  <a target=\"_blank\" attr-href=\"model.linkUrl\">{{model.source}}</a>\n</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"controls-wrapper\">\n    <i class=\"icon-play\"></i>\n    <i class=\"icon-pause\"></i>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
 
     SongView.prototype.events = {
       click: function() {
         if (!this.isPlaying) {
           return this.play();
-        } else {
-          return this.stop();
         }
+      },
+      'click .controls-wrapper': function(e) {
+        e.stopPropagation();
+        return this.togglePause();
       }
     };
 
     SongView.prototype.initialize = function() {
       var _this = this;
-      return Events.on('songlocator:play', function(sound) {
+      return app.on('songlocator:play', function(sound) {
         if (sound !== _this.sound) {
           return _this.stop();
         }
       });
     };
 
+    SongView.prototype.play = function() {
+      this.isPlaying = true;
+      this.$el.addClass('playing');
+      this.$el.addClass('openned');
+      if (!this.sound) {
+        this.sound = this.createSound();
+      }
+      this.sound.play();
+      return app.trigger('songlocator:play', this.sound);
+    };
+
     SongView.prototype.stop = function() {
       this.$progress.width(0);
       this.$el.removeClass('playing');
+      this.$el.removeClass('openned');
       this.isPlaying = false;
       if (this.sound) {
         return this.sound.stop();
+      }
+    };
+
+    SongView.prototype.resume = function() {
+      this.isPlaying = true;
+      this.$el.addClass('playing');
+      return this.sound.resume();
+    };
+
+    SongView.prototype.pause = function() {
+      this.isPlaying = false;
+      this.$el.removeClass('playing');
+      return this.sound.pause();
+    };
+
+    SongView.prototype.togglePause = function() {
+      if (this.isPlaying) {
+        return this.pause();
+      } else {
+        return this.resume();
       }
     };
 
@@ -20524,16 +20592,6 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
       });
     };
 
-    SongView.prototype.play = function() {
-      this.isPlaying = true;
-      this.$el.addClass('playing');
-      if (!this.sound) {
-        this.sound = this.createSound();
-      }
-      this.sound.play();
-      return Events.trigger('songlocator:play', this.sound);
-    };
-
     SongView.prototype.remove = function() {
       SongView.__super__.remove.apply(this, arguments);
       if (this.sound != null) {
@@ -20555,13 +20613,13 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
   exports.search = function(searchString) {
     var qid;
     qid = uniqueId('search');
-    Events.trigger('songlocator:search', qid, searchString);
+    app.trigger('songlocator:search', qid, searchString);
     return resolver.search(qid, searchString);
   };
   exports.resolve = function(track, artist, album) {
     var qid;
     qid = uniqueId('resolve');
-    Events.trigger('songlocator:resolve', qid, artist, track, album);
+    app.trigger('songlocator:resolve', qid, artist, track, album);
     return resolver.resolve(qid, track, artist, album);
   };
   exports.player = {
@@ -20573,17 +20631,18 @@ define('app',['require','exports','module','backbone.viewdsl','underscore','back
       }
     }
   };
-  extend(window, exports);
   $(function() {
     var app;
     soundManager.setup({
-      url: 'swf'
+      url: 'swf',
+      debugMode: false
     });
     youtubeManager.setup();
-    app = exports.app = new App();
+    exports.app = app = new exports.App();
     app.render();
     return document.body.appendChild(app.el);
   });
+  extend(window, exports);
   return exports;
 });
 
