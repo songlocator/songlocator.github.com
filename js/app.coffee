@@ -171,7 +171,7 @@ define (require, exports) ->
         soundManager.createSound(options)
 
   $ ->
-    soundManager.setup(url: 'swf')
+    soundManager.setup(url: 'swf', debugMode: false)
     youtubeManager.setup()
     exports.app = app = new exports.App()
     app.render()

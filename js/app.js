@@ -242,7 +242,8 @@ define(function(require, exports) {
   $(function() {
     var app;
     soundManager.setup({
-      url: 'swf'
+      url: 'swf',
+      debugMode: false
     });
     youtubeManager.setup();
     exports.app = app = new exports.App();
