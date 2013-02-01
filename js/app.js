@@ -245,7 +245,7 @@ define(function(require, exports) {
       url: 'swf'
     });
     youtubeManager.setup();
-    exports.app = app = new App();
+    exports.app = app = new exports.App();
     app.render();
     return document.body.appendChild(app.el);
   });

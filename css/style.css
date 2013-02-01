@@ -160,9 +160,8 @@ a {
   cursor: pointer; }
   .song .box {
     display: none;
-    height: 200px; }
-    .song .box .cover {
-      width: 200px; }
+    height: 200px;
+    background: white; }
     .song .box .cover-wrapper {
       float: left;
       width: 200px;
@@ -171,8 +170,15 @@ a {
       float: left;
       font-size: 180%;
       padding: 10px; }
+  .song .progress {
+    display: none;
+    position: relative;
+    width: 0;
+    height: 6px;
+    background: #a8a8a8; }
   .song.playing .box {
-    background: white;
+    display: block; }
+  .song.playing .progress {
     display: block; }
   .song.playing .metadata-line {
     display: none; }
@@ -195,8 +201,3 @@ a {
     opacity: 0.3; }
     .song .source:hover {
       opacity: 1; }
-  .song .progress {
-    position: relative;
-    width: 0;
-    height: 4px;
-    background: #a8a8a8; }

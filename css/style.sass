@@ -123,9 +123,7 @@ a
   .box
     display: none
     height: 200px
-
-    .cover
-      width: 200px
+    background: lighten($bg, 10%)
 
     .cover-wrapper
       float: left
@@ -137,9 +135,17 @@ a
       font-size: 180%
       padding: 10px
 
+  .progress
+    display: none
+    position: relative
+    width: 0
+    height: 6px
+    background: darken($bg, 30%)
+
   &.playing
     .box
-      background: lighten($bg, 10%)
+      display: block
+    .progress
       display: block
     .metadata-line
       display: none
@@ -164,10 +170,3 @@ a
     opacity: 0.3
     &:hover
       opacity: 1
-
-  .progress
-    position: relative
-    width: 0
-    height: 4px
-    background: darken($bg, 30%)
-

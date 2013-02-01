@@ -78,7 +78,6 @@ define (require, exports) ->
         v.remove()
       this.$el.html('')
 
-
   class exports.SongView extends View
     className: 'song'
     isPlaying: false
@@ -127,9 +126,11 @@ define (require, exports) ->
     createSound: ->
       player.createSound
         id: uniqueId('sound')
+
         playerId: this.playerId
         width: 200
         height: 200
+
         url: this.model.url or this.model.linkUrl
         whileplaying: => this.onPlaying()
         onstop: => this.stop()
@@ -172,7 +173,7 @@ define (require, exports) ->
   $ ->
     soundManager.setup(url: 'swf')
     youtubeManager.setup()
-    exports.app = app = new App()
+    exports.app = app = new exports.App()
     app.render()
     document.body.appendChild(app.el)
 
