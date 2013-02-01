@@ -12,6 +12,7 @@
     "jquery": "../components/jquery/jquery",
     "underscore": "../components/underscore/underscore",
     "backbone": "../components/backbone/backbone",
+    "backbone.record": "../components/backbone.record/backbone.record",
     "backbone.viewdsl": "../components/backbone.viewdsl/backbone.viewdsl",
     "soundmanager2": "../components/soundmanager/script/soundmanager2",
     "youtubemanager": "../components/youtubemanager/lib/youtubemanager",

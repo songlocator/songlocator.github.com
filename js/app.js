@@ -7,17 +7,86 @@ define('xmlhttprequest', {
 });
 
 define(function(require, exports) {
-  var ExfmResolver, ResolverSet, SoundCloudResolver, View, YouTubeResolver, extend, renderInPlace, soundManager, uniqueId, youtubeManager, _ref, _ref1;
-  _ref = require('backbone.viewdsl'), View = _ref.View, renderInPlace = _ref.renderInPlace;
-  _ref1 = require('underscore'), extend = _ref1.extend, uniqueId = _ref1.uniqueId;
+  var App, Collection, ExfmResolver, Record, ResolverSet, ResultList, SearchBox, Song, SongView, Songs, SoundCloudResolver, Stream, View, YouTubeResolver, extend, player, rankSearchResults, renderInPlace, resolve, resolver, search, soundManager, uniqueId, youtubeManager, _ref, _ref1, _ref2;
+  _ref = require('underscore'), extend = _ref.extend, uniqueId = _ref.uniqueId;
+  Collection = require('backbone').Collection;
+  _ref1 = require('backbone.viewdsl'), View = _ref1.View, renderInPlace = _ref1.renderInPlace;
+  Record = require('backbone.record').Record;
   soundManager = require('soundmanager2');
   youtubeManager = require('youtubemanager');
-  ResolverSet = require('songlocator-base').ResolverSet;
+  _ref2 = require('songlocator-base'), ResolverSet = _ref2.ResolverSet, rankSearchResults = _ref2.rankSearchResults;
   YouTubeResolver = require('songlocator-youtube').Resolver;
   SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver;
   ExfmResolver = require('songlocator-tomahawk-exfm').Resolver;
-  exports.resolver = new ResolverSet(new YouTubeResolver(), new SoundCloudResolver(), new ExfmResolver());
-  exports.App = (function(_super) {
+  Stream = (function(_super) {
+
+    __extends(Stream, _super);
+
+    function Stream() {
+      return Stream.__super__.constructor.apply(this, arguments);
+    }
+
+    Stream.define('track', 'artist', 'source', 'audioURL', 'linkURL', 'imageURL', 'rank');
+
+    return Stream;
+
+  })(Record);
+  Song = (function(_super) {
+
+    __extends(Song, _super);
+
+    Song.define('track', 'artist', 'streams');
+
+    function Song() {
+      Song.__super__.constructor.apply(this, arguments);
+      this.streams = this.streams || new Collection();
+      if (!(this.streams instanceof Collection)) {
+        this.streams = new Collection(this.streams);
+      }
+    }
+
+    return Song;
+
+  })(Record);
+  Songs = (function(_super) {
+
+    __extends(Songs, _super);
+
+    function Songs() {
+      return Songs.__super__.constructor.apply(this, arguments);
+    }
+
+    Songs.prototype.findSong = function(track, artist) {
+      return this.find(function(song) {
+        return song.artist.toLowerCase() === artist.toLowerCase() && song.track.toLowerCase() === track.toLowerCase();
+      });
+    };
+
+    Songs.prototype.addStream = function(stream) {
+      var song, streams;
+      song = this.findSong(stream.track, stream.artist);
+      if (song) {
+        streams = song.streams.where({
+          source: stream.source
+        });
+        if (streams.length === 0) {
+          return song.streams.add(stream);
+        }
+      } else {
+        song = new Song({
+          track: stream.track,
+          artist: stream.artist,
+          streams: [stream]
+        });
+        return this.add(song);
+      }
+    };
+
+    return Songs;
+
+  })(Collection);
+  resolver = new ResolverSet(new YouTubeResolver(), new SoundCloudResolver(), new ExfmResolver());
+  App = (function(_super) {
 
     __extends(App, _super);
 
@@ -34,7 +103,7 @@ define(function(require, exports) {
     return App;
 
   })(View);
-  exports.SearchBox = (function(_super) {
+  SearchBox = (function(_super) {
 
     __extends(SearchBox, _super);
 
@@ -69,7 +138,7 @@ define(function(require, exports) {
     return SearchBox;
 
   })(View);
-  exports.ResultList = (function(_super) {
+  ResultList = (function(_super) {
 
     __extends(ResultList, _super);
 
@@ -83,16 +152,20 @@ define(function(require, exports) {
 
     ResultList.prototype.initialize = function() {
       var _this = this;
+      this.collection = this.collection || new Songs();
+      this.collection.on('add', function(model) {
+        return _this.renderSong(model);
+      });
       resolver.on('results', function(result) {
-        var r, _i, _len, _ref2, _results;
+        var r, _i, _len, _ref3, _results;
         if (result.qid !== _this.qid) {
           return;
         }
-        _ref2 = result.results;
+        _ref3 = result.results;
         _results = [];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          r = _ref2[_i];
-          _results.push(_this.renderResult(r));
+        for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+          r = _ref3[_i];
+          _results.push(_this.processResult(r));
         }
         return _results;
       });
@@ -101,18 +174,32 @@ define(function(require, exports) {
       });
     };
 
-    ResultList.prototype.renderResult = function(result) {
-      return this.renderDOM("<li>\n  <view name=\"app:SongView\" model=\"result\"></view>\n</li>", {
-        result: result
+    ResultList.prototype.processResult = function(result) {
+      var stream;
+      stream = new Stream({
+        track: result.track,
+        artist: result.artist,
+        source: result.source,
+        audioURL: result.url,
+        linkURL: result.linkUrl,
+        imageURL: void 0,
+        rank: result.rank
       });
+      return this.collection.addStream(stream);
+    };
+
+    ResultList.prototype.renderSong = function(song) {
+      return this.renderDOM("<li>\n  <view name=\"app:SongView\" model=\"song\"></view>\n</li>", {
+        song: song
+      }).done();
     };
 
     ResultList.prototype.reset = function(qid) {
-      var v, _i, _len, _ref2;
+      var v, _i, _len, _ref3;
       this.qid = qid;
-      _ref2 = this.views;
-      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-        v = _ref2[_i];
+      _ref3 = this.views;
+      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+        v = _ref3[_i];
         v.remove();
       }
       return this.$el.html('');
@@ -121,7 +208,7 @@ define(function(require, exports) {
     return ResultList;
 
   })(View);
-  exports.SongView = (function(_super) {
+  SongView = (function(_super) {
 
     __extends(SongView, _super);
 
@@ -133,7 +220,25 @@ define(function(require, exports) {
 
     SongView.prototype.isPlaying = false;
 
-    SongView.prototype.template = "<span class=\"source\">\n  <a target=\"_blank\" attr-href=\"model.linkUrl\">{{model.source}}</a>\n</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"controls-wrapper\">\n    <i class=\"icon-play\"></i>\n    <i class=\"icon-pause\"></i>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
+    SongView.prototype.template = "<span class=\"source\" element-id=\"$sourceLinks\">{{sourceLinks}}</span>\n<div class=\"metadata-line\">\n  <span class=\"track\">{{model.track}}</span>\n  <span class=\"artist\">{{model.artist}}</span>\n</div>\n<div element-id=\"$progress\" class=\"progress\"></div>\n<div element-id=\"$box\" class=\"box\">\n  <div class=\"cover-wrapper\">\n    <div element-id=\"$cover\"></div>\n  </div>\n  <div class=\"controls-wrapper\">\n    <i class=\"icon-play\"></i>\n    <i class=\"icon-pause\"></i>\n  </div>\n  <div class=\"metadata-wrapper\">\n    <div class=\"track\">{{model.track}}</div>\n    <div class=\"artist\">{{model.artist}}</div>\n  </div>\n</div>";
+
+    SongView.prototype.initialize = function() {
+      var _this = this;
+      app.on('songlocator:play', function(sound) {
+        if (sound !== _this.sound) {
+          return _this.stop();
+        }
+      });
+      return this.model.streams.on('add', function() {
+        return _this.$sourceLinks.html(_this.sourceLinks());
+      });
+    };
+
+    SongView.prototype.sourceLinks = function() {
+      return this.model.streams.map(function(stream) {
+        return $("<a target=\"_blank\" href=\"" + stream.linkURL + "\">" + stream.source + "</a>");
+      });
+    };
 
     SongView.prototype.events = {
       click: function() {
@@ -145,15 +250,6 @@ define(function(require, exports) {
         e.stopPropagation();
         return this.togglePause();
       }
-    };
-
-    SongView.prototype.initialize = function() {
-      var _this = this;
-      return app.on('songlocator:play', function(sound) {
-        if (sound !== _this.sound) {
-          return _this.stop();
-        }
-      });
     };
 
     SongView.prototype.play = function() {
@@ -212,7 +308,7 @@ define(function(require, exports) {
         playerId: this.playerId,
         width: 200,
         height: 200,
-        url: this.model.url || this.model.linkUrl,
+        url: this.model.streams.at(0).audioURL || this.model.streams.at(0).linkURL,
         whileplaying: function() {
           return _this.onPlaying();
         },
@@ -243,19 +339,19 @@ define(function(require, exports) {
     return SongView;
 
   })(View);
-  exports.search = function(searchString) {
+  search = function(searchString) {
     var qid;
     qid = uniqueId('search');
     app.trigger('songlocator:search', qid, searchString);
     return resolver.search(qid, searchString);
   };
-  exports.resolve = function(track, artist, album) {
+  resolve = function(track, artist, album) {
     var qid;
     qid = uniqueId('resolve');
     app.trigger('songlocator:resolve', qid, artist, track, album);
     return resolver.resolve(qid, track, artist, album);
   };
-  exports.player = {
+  player = {
     createSound: function(options) {
       if (/youtube.com/.test(options.url)) {
         return youtubeManager.createSound(options);
@@ -271,9 +367,19 @@ define(function(require, exports) {
       debugMode: false
     });
     youtubeManager.setup();
-    exports.app = app = new exports.App();
+    exports.app = app = new App();
     app.render();
     return document.body.appendChild(app.el);
+  });
+  extend(exports, {
+    App: App,
+    SearchBox: SearchBox,
+    ResultList: ResultList,
+    SongView: SongView,
+    resolve: resolve,
+    search: search,
+    player: player,
+    resolver: resolver
   });
   extend(window, exports);
   return exports;

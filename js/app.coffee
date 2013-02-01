@@ -1,21 +1,53 @@
 define('xmlhttprequest', {XMLHttpRequest})
 
 define (require, exports) ->
-  {View, renderInPlace} = require 'backbone.viewdsl'
   {extend, uniqueId} = require 'underscore'
+
+  {Collection} = require 'backbone'
+  {View, renderInPlace} = require 'backbone.viewdsl'
+  {Record} = require 'backbone.record'
+
   soundManager = require 'soundmanager2'
   youtubeManager = require 'youtubemanager'
-  {ResolverSet} = require 'songlocator-base'
+
+  {ResolverSet, rankSearchResults} = require 'songlocator-base'
   YouTubeResolver = require('songlocator-youtube').Resolver
   SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver
   ExfmResolver = require('songlocator-tomahawk-exfm').Resolver
 
-  exports.resolver = new ResolverSet(
+  class Stream extends Record
+    @define 'track', 'artist', 'source', 'audioURL', 'linkURL', 'imageURL', 'rank'
+
+  class Song extends Record
+    @define 'track', 'artist', 'streams'
+
+    constructor: ->
+      super
+      this.streams = this.streams or new Collection()
+      this.streams = new Collection(this.streams) if not (this.streams instanceof Collection)
+
+  class Songs extends Collection
+
+    findSong: (track, artist) ->
+      this.find (song) ->
+        song.artist.toLowerCase() == artist.toLowerCase() \
+          and song.track.toLowerCase() == track.toLowerCase()
+
+    addStream: (stream) ->
+      song = this.findSong(stream.track, stream.artist)
+      if song
+        streams = song.streams.where(source: stream.source)
+        song.streams.add(stream) if streams.length == 0
+      else
+        song = new Song(track: stream.track, artist: stream.artist, streams: [stream])
+        this.add(song)
+
+  resolver = new ResolverSet(
     new YouTubeResolver(),
     new SoundCloudResolver(),
     new ExfmResolver())
 
-  class exports.App extends View
+  class App extends View
     className: 'app'
     parameterizable: true
     template: """
@@ -39,7 +71,7 @@ define (require, exports) ->
       </footer>
       """
 
-  class exports.SearchBox extends View
+  class SearchBox extends View
     tagName: 'input'
     className: 'search-box'
     attributes:
@@ -53,25 +85,40 @@ define (require, exports) ->
         return unless searchString
         search(searchString)
 
-  class exports.ResultList extends View
+  class ResultList extends View
     tagName: 'ul'
     className: 'results'
 
     initialize: ->
+      this.collection = this.collection or new Songs()
+
+      this.collection.on 'add', (model) =>
+        this.renderSong(model)
+
       resolver.on 'results', (result) =>
         return unless result.qid == this.qid
-        for r in result.results
-          this.renderResult(r)
+        this.processResult(r) for r in result.results
 
       app.on 'songlocator:search songlocator:resolve', (qid) =>
         this.reset(qid)
 
-    renderResult: (result) ->
-      this.renderDOM """
+    processResult: (result) ->
+      stream = new Stream
+        track: result.track
+        artist: result.artist
+        source: result.source
+        audioURL: result.url
+        linkURL: result.linkUrl
+        imageURL: undefined
+        rank: result.rank
+      this.collection.addStream(stream)
+
+    renderSong: (song) ->
+      this.renderDOM("""
         <li>
-          <view name="app:SongView" model="result"></view>
+          <view name="app:SongView" model="song"></view>
         </li>
-        """, {result: result}
+        """, {song: song}).done()
 
     reset: (qid) ->
       this.qid = qid
@@ -79,13 +126,11 @@ define (require, exports) ->
         v.remove()
       this.$el.html('')
 
-  class exports.SongView extends View
+  class SongView extends View
     className: 'song'
     isPlaying: false
     template: """
-      <span class="source">
-        <a target="_blank" attr-href="model.linkUrl">{{model.source}}</a>
-      </span>
+      <span class="source" element-id="$sourceLinks">{{sourceLinks}}</span>
       <div class="metadata-line">
         <span class="track">{{model.track}}</span>
         <span class="artist">{{model.artist}}</span>
@@ -106,6 +151,16 @@ define (require, exports) ->
       </div>
       """
 
+    initialize: ->
+      app.on 'songlocator:play', (sound) =>
+        this.stop() if sound != this.sound
+      this.model.streams.on 'add', =>
+        this.$sourceLinks.html(this.sourceLinks())
+
+    sourceLinks: ->
+      this.model.streams.map (stream) ->
+        $ """<a target="_blank" href="#{stream.linkURL}">#{stream.source}</a>"""
+
     events:
       click: ->
         if not this.isPlaying
@@ -114,10 +169,6 @@ define (require, exports) ->
       'click .controls-wrapper': (e) ->
         e.stopPropagation()
         this.togglePause()
-
-    initialize: ->
-      app.on 'songlocator:play', (sound) =>
-        this.stop() if sound != this.sound
 
     play: ->
       this.isPlaying = true
@@ -161,7 +212,7 @@ define (require, exports) ->
         width: 200
         height: 200
 
-        url: this.model.url or this.model.linkUrl
+        url: this.model.streams.at(0).audioURL or this.model.streams.at(0).linkURL
         whileplaying: => this.onPlaying()
         onstop: => this.stop()
         onfinish: => this.stop()
@@ -175,17 +226,17 @@ define (require, exports) ->
         this.playerId = uniqueId('cover')
         this.$cover.attr('id', this.playerId)
 
-  exports.search = (searchString) ->
+  search = (searchString) ->
     qid = uniqueId('search')
     app.trigger 'songlocator:search', qid, searchString
     resolver.search(qid, searchString)
 
-  exports.resolve = (track, artist, album) ->
+  resolve = (track, artist, album) ->
     qid = uniqueId('resolve')
     app.trigger 'songlocator:resolve', qid, artist, track, album
     resolver.resolve(qid, track, artist, album)
 
-  exports.player =
+  player =
 
     createSound: (options) ->
       if /youtube.com/.test options.url
@@ -196,9 +247,15 @@ define (require, exports) ->
   $ ->
     soundManager.setup(url: 'swf', debugMode: false)
     youtubeManager.setup()
-    exports.app = app = new exports.App()
+    exports.app = app = new App()
     app.render()
     document.body.appendChild(app.el)
 
-  extend(window, exports)
+  extend exports, {
+    App, SearchBox, ResultList, SongView,
+    resolve, search, player, resolver
+  }
+
+  extend window, exports
+
   exports
