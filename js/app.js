@@ -198,9 +198,10 @@ define(function(require, exports) {
     };
 
     SongView.prototype.onPlaying = function() {
-      var soFar, totalWidth;
+      var duration, soFar, totalWidth;
       totalWidth = this.$el.width();
-      soFar = this.sound.position / this.sound.durationEstimate;
+      duration = this.sound.durationEstimate || this.sound.duration;
+      soFar = this.sound.position / sound;
       return this.$progress.width(soFar * totalWidth);
     };
 
