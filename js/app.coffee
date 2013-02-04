@@ -97,6 +97,7 @@ define (require, exports) ->
   class ResultList extends View
     tagName: 'ul'
     className: 'results'
+    resultTemplate: $ '<li><view name="app:SongView" model="song"></view></li>'
 
     initialize: ->
       this.collection = this.collection or new Songs()
@@ -117,7 +118,7 @@ define (require, exports) ->
         this.reset(query)
 
     processResult: (result) ->
-      return if result.rank > 10
+      return if result.rank > 50
 
       stream = new Stream
         track: result.track
@@ -140,7 +141,7 @@ define (require, exports) ->
     renderSong: (song) ->
       ctx = {song}
       this
-        .renderTemplate('<li><view name="app:SongView" model="song"></view></li>', {song})
+        .renderTemplate(this.resultTemplate, {song})
         .then (node) =>
           this.appendAt(node, this.collection.indexOf(song))
         .done()

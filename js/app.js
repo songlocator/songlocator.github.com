@@ -164,6 +164,8 @@ define(function(require, exports) {
 
     ResultList.prototype.className = 'results';
 
+    ResultList.prototype.resultTemplate = $('<li><view name="app:SongView" model="song"></view></li>');
+
     ResultList.prototype.initialize = function() {
       var _this = this;
       this.collection = this.collection || new Songs();
@@ -203,7 +205,7 @@ define(function(require, exports) {
 
     ResultList.prototype.processResult = function(result) {
       var stream;
-      if (result.rank > 10) {
+      if (result.rank > 50) {
         return;
       }
       stream = new Stream({
@@ -234,7 +236,7 @@ define(function(require, exports) {
       ctx = {
         song: song
       };
-      return this.renderTemplate('<li><view name="app:SongView" model="song"></view></li>', {
+      return this.renderTemplate(this.resultTemplate, {
         song: song
       }).then(function(node) {
         return _this.appendAt(node, _this.collection.indexOf(song));
