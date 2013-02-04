@@ -946,17 +946,7 @@ a {
     width: 800px;
     margin: 0px auto;
     padding-bottom: 140px;
-    padding-top: 80px;
-    -webkit-transform-origin: 0px 0px 0px;
-    -moz-transform-origin: 0px 0px 0px;
-    -ms-transform-origin: 0px 0px 0px;
-    -o-transform-origin: 0px 0px 0px;
-    transform-origin: 0px 0px 0px;
-    -webkit-transform: rotate(-4deg);
-    -moz-transform: rotate(-4deg);
-    -ms-transform: rotate(-4deg);
-    -o-transform: rotate(-4deg);
-    transform: rotate(-4deg); }
+    padding-top: 80px; }
   .app footer {
     height: 60px;
     width: 100%;
