@@ -26,7 +26,16 @@ define (require, exports) ->
       this.streams = this.streams or new Collection()
       this.streams = new Collection(this.streams) if not (this.streams instanceof Collection)
 
+    rank: ->
+      Math.min.apply(null, this.streams.map((s) -> s.rank))
+
+    fullTitle: ->
+      "#{this.track} - #{this.artist}"
+
   class Songs extends Collection
+
+    comparator: (song) ->
+      song.rank()
 
     findSong: (track, artist) ->
       this.find (song) ->
@@ -96,13 +105,17 @@ define (require, exports) ->
         this.renderSong(model)
 
       resolver.on 'results', (result) =>
-        return unless result.qid == this.qid
+        return unless result.qid == this.query.qid
+        if this.query.searchString?
+          rankSearchResults(result.results, this.query.searchString)
         this.processResult(r) for r in result.results
 
-      app.on 'songlocator:search songlocator:resolve', (qid) =>
-        this.reset(qid)
+      app.on 'songlocator:search songlocator:resolve', (query) =>
+        this.reset(query)
 
     processResult: (result) ->
+      return if result.rank > 10
+
       stream = new Stream
         track: result.track
         artist: result.artist
@@ -111,17 +124,26 @@ define (require, exports) ->
         linkURL: result.linkUrl
         imageURL: undefined
         rank: result.rank
+
       this.collection.addStream(stream)
 
-    renderSong: (song) ->
-      this.renderDOM("""
-        <li>
-          <view name="app:SongView" model="song"></view>
-        </li>
-        """, {song: song}).done()
+    appendAt: (node, idx) ->
+      $children = this.$el.children()
+      if idx >= $children.size()
+        this.$el.append(node)
+      else
+        $children.eq(idx).before(node)
 
-    reset: (qid) ->
-      this.qid = qid
+    renderSong: (song) ->
+      ctx = {song}
+      this
+        .renderTemplate('<li><view name="app:SongView" model="song"></view></li>', {song})
+        .then (node) =>
+          this.appendAt(node, this.collection.indexOf(song))
+        .done()
+
+    reset: (query) ->
+      this.query = query
       for v in this.views
         v.remove()
       this.$el.html('')
@@ -228,12 +250,12 @@ define (require, exports) ->
 
   search = (searchString) ->
     qid = uniqueId('search')
-    app.trigger 'songlocator:search', qid, searchString
+    app.trigger 'songlocator:search', {qid, searchString}
     resolver.search(qid, searchString)
 
   resolve = (track, artist, album) ->
     qid = uniqueId('resolve')
-    app.trigger 'songlocator:resolve', qid, artist, track, album
+    app.trigger 'songlocator:resolve', {qid, artist, track, album}
     resolver.resolve(qid, track, artist, album)
 
   player =

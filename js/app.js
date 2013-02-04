@@ -45,6 +45,16 @@ define(function(require, exports) {
       }
     }
 
+    Song.prototype.rank = function() {
+      return Math.min.apply(null, this.streams.map(function(s) {
+        return s.rank;
+      }));
+    };
+
+    Song.prototype.fullTitle = function() {
+      return "" + this.track + " - " + this.artist;
+    };
+
     return Song;
 
   })(Record);
@@ -55,6 +65,10 @@ define(function(require, exports) {
     function Songs() {
       return Songs.__super__.constructor.apply(this, arguments);
     }
+
+    Songs.prototype.comparator = function(song) {
+      return song.rank();
+    };
 
     Songs.prototype.findSong = function(track, artist) {
       return this.find(function(song) {
@@ -158,8 +172,11 @@ define(function(require, exports) {
       });
       resolver.on('results', function(result) {
         var r, _i, _len, _ref3, _results;
-        if (result.qid !== _this.qid) {
+        if (result.qid !== _this.query.qid) {
           return;
+        }
+        if (_this.query.searchString != null) {
+          rankSearchResults(result.results, _this.query.searchString);
         }
         _ref3 = result.results;
         _results = [];
@@ -169,13 +186,16 @@ define(function(require, exports) {
         }
         return _results;
       });
-      return app.on('songlocator:search songlocator:resolve', function(qid) {
-        return _this.reset(qid);
+      return app.on('songlocator:search songlocator:resolve', function(query) {
+        return _this.reset(query);
       });
     };
 
     ResultList.prototype.processResult = function(result) {
       var stream;
+      if (result.rank > 10) {
+        return;
+      }
       stream = new Stream({
         track: result.track,
         artist: result.artist,
@@ -188,15 +208,32 @@ define(function(require, exports) {
       return this.collection.addStream(stream);
     };
 
+    ResultList.prototype.appendAt = function(node, idx) {
+      var $children;
+      $children = this.$el.children();
+      if (idx >= $children.size()) {
+        return this.$el.append(node);
+      } else {
+        return $children.eq(idx).before(node);
+      }
+    };
+
     ResultList.prototype.renderSong = function(song) {
-      return this.renderDOM("<li>\n  <view name=\"app:SongView\" model=\"song\"></view>\n</li>", {
+      var ctx,
+        _this = this;
+      ctx = {
         song: song
+      };
+      return this.renderTemplate('<li><view name="app:SongView" model="song"></view></li>', {
+        song: song
+      }).then(function(node) {
+        return _this.appendAt(node, _this.collection.indexOf(song));
       }).done();
     };
 
-    ResultList.prototype.reset = function(qid) {
+    ResultList.prototype.reset = function(query) {
       var v, _i, _len, _ref3;
-      this.qid = qid;
+      this.query = query;
       _ref3 = this.views;
       for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
         v = _ref3[_i];
@@ -342,13 +379,21 @@ define(function(require, exports) {
   search = function(searchString) {
     var qid;
     qid = uniqueId('search');
-    app.trigger('songlocator:search', qid, searchString);
+    app.trigger('songlocator:search', {
+      qid: qid,
+      searchString: searchString
+    });
     return resolver.search(qid, searchString);
   };
   resolve = function(track, artist, album) {
     var qid;
     qid = uniqueId('resolve');
-    app.trigger('songlocator:resolve', qid, artist, track, album);
+    app.trigger('songlocator:resolve', {
+      qid: qid,
+      artist: artist,
+      track: track,
+      album: album
+    });
     return resolver.resolve(qid, track, artist, album);
   };
   player = {
