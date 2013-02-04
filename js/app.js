@@ -170,14 +170,27 @@ define(function(require, exports) {
       this.collection.on('add', function(model) {
         return _this.renderSong(model);
       });
+      this.collection.on('reset', function(model) {
+        var view, _i, _len, _ref3, _results;
+        _ref3 = _this.views;
+        _results = [];
+        for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
+          view = _ref3[_i];
+          _results.push(view.remove());
+        }
+        return _results;
+      });
       resolver.on('results', function(result) {
         var r, _i, _len, _ref3, _results;
+        console.log(result.qid);
         if (result.qid !== _this.query.qid) {
           return;
         }
+        console.log('ok');
         if (_this.query.searchString != null) {
           rankSearchResults(result.results, _this.query.searchString);
         }
+        console.log('hm');
         _ref3 = result.results;
         _results = [];
         for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
@@ -232,14 +245,8 @@ define(function(require, exports) {
     };
 
     ResultList.prototype.reset = function(query) {
-      var v, _i, _len, _ref3;
-      this.query = query;
-      _ref3 = this.views;
-      for (_i = 0, _len = _ref3.length; _i < _len; _i++) {
-        v = _ref3[_i];
-        v.remove();
-      }
-      return this.$el.html('');
+      this.collection.reset();
+      return this.query = query;
     };
 
     return ResultList;

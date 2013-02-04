@@ -103,11 +103,17 @@ define (require, exports) ->
 
       this.collection.on 'add', (model) =>
         this.renderSong(model)
+      this.collection.on 'reset', (model) =>
+        for view in this.views
+          view.remove()
 
       resolver.on 'results', (result) =>
+        console.log result.qid
         return unless result.qid == this.query.qid
+        console.log 'ok'
         if this.query.searchString?
           rankSearchResults(result.results, this.query.searchString)
+        console.log 'hm'
         this.processResult(r) for r in result.results
 
       app.on 'songlocator:search songlocator:resolve', (query) =>
@@ -143,10 +149,8 @@ define (require, exports) ->
         .done()
 
     reset: (query) ->
+      this.collection.reset()
       this.query = query
-      for v in this.views
-        v.remove()
-      this.$el.html('')
 
   class SongView extends View
     className: 'song'
