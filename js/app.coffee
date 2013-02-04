@@ -12,8 +12,13 @@ define (require, exports) ->
 
   {ResolverSet, rankSearchResults} = require 'songlocator-base'
   YouTubeResolver = require('songlocator-youtube').Resolver
-  SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver
-  ExfmResolver = require('songlocator-tomahawk-exfm').Resolver
+  SoundCloudResolver = require('songlocator-soundcloud').Resolver
+  ExfmResolver = require('songlocator-exfm').Resolver
+
+  resolver = new ResolverSet(
+    new YouTubeResolver(),
+    new SoundCloudResolver(),
+    new ExfmResolver())
 
   class Stream extends Record
     @define 'track', 'artist', 'source', 'audioURL', 'linkURL', 'imageURL', 'rank'
@@ -50,11 +55,6 @@ define (require, exports) ->
       else
         song = new Song(track: stream.track, artist: stream.artist, streams: [stream])
         this.add(song)
-
-  resolver = new ResolverSet(
-    new YouTubeResolver(),
-    new SoundCloudResolver(),
-    new ExfmResolver())
 
   class App extends View
     className: 'app'

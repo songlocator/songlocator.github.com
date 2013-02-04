@@ -16,8 +16,9 @@ define(function(require, exports) {
   youtubeManager = require('youtubemanager');
   _ref2 = require('songlocator-base'), ResolverSet = _ref2.ResolverSet, rankSearchResults = _ref2.rankSearchResults;
   YouTubeResolver = require('songlocator-youtube').Resolver;
-  SoundCloudResolver = require('songlocator-tomahawk-soundcloud').Resolver;
-  ExfmResolver = require('songlocator-tomahawk-exfm').Resolver;
+  SoundCloudResolver = require('songlocator-soundcloud').Resolver;
+  ExfmResolver = require('songlocator-exfm').Resolver;
+  resolver = new ResolverSet(new YouTubeResolver(), new SoundCloudResolver(), new ExfmResolver());
   Stream = (function(_super) {
 
     __extends(Stream, _super);
@@ -99,7 +100,6 @@ define(function(require, exports) {
     return Songs;
 
   })(Collection);
-  resolver = new ResolverSet(new YouTubeResolver(), new SoundCloudResolver(), new ExfmResolver());
   App = (function(_super) {
 
     __extends(App, _super);
