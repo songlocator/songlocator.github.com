@@ -108,12 +108,9 @@ define (require, exports) ->
           view.remove()
 
       resolver.on 'results', (result) =>
-        console.log result.qid
         return unless result.qid == this.query.qid
-        console.log 'ok'
         if this.query.searchString?
           rankSearchResults(result.results, this.query.searchString)
-        console.log 'hm'
         this.processResult(r) for r in result.results
 
       app.on 'songlocator:search songlocator:resolve', (query) =>
